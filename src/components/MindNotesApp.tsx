@@ -9,7 +9,6 @@ import { NotesSection } from './NotesSection';
 import { ChatSection } from './ChatSection';
 import { LanguageSelector } from './LanguageSelector';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useSession } from '@/contexts/SessionContext'; // Import useSession
 
 const initialUserProgress: UserProgress = {
   level: 0,
@@ -20,18 +19,12 @@ const initialUserProgress: UserProgress = {
 
 export const MindNotesApp = () => {
   const { t } = useLanguage();
-  const { user } = useSession(); // Get user from session context
-
-  // Initialize appState with user-specific key or default if no user
-  const [appState, setAppState] = useLocalStorage<AppState>(
-    user ? `mindnotes-state-${user.id}` : 'mindnotes-state-guest', // Use user.id for unique storage
-    {
-      activeTab: 'notes',
-      taskLists: [],
-      freeFormNotes: [],
-      userProgress: initialUserProgress,
-    }
-  );
+  const [appState, setAppState] = useLocalStorage<AppState>('mindnotes-state', {
+    activeTab: 'notes',
+    taskLists: [],
+    freeFormNotes: [],
+    userProgress: initialUserProgress,
+  });
 
   // Ensure freeFormNotes exists (for backwards compatibility)
   const safeAppState = {
