@@ -4,10 +4,7 @@ import {
   Bold, 
   Italic, 
   Underline, 
-  Strikethrough, 
-  Code,
-  Superscript,
-  Subscript,
+  Code, // Keep Code if it's for inline code, not block
   Palette,
   Highlighter,
   Link,
@@ -107,15 +104,6 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
         break;
       case 'underline':
         document.execCommand('underline', false);
-        break;
-      case 'strikethrough':
-        document.execCommand('strikeThrough', false);
-        break;
-      case 'superscript':
-        document.execCommand('superscript', false);
-        break;
-      case 'subscript':
-        document.execCommand('subscript', false);
         break;
       case 'color':
         if (value) {
@@ -266,35 +254,7 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             <Underline className="h-4 w-4" />
           </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => applyFormat('strikethrough')}
-            title="Tachado"
-          >
-            <Strikethrough className="h-4 w-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => applyFormat('superscript')}
-            title="Sobrescrito"
-          >
-            <Superscript className="h-4 w-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={() => applyFormat('subscript')}
-            title="Subscrito"
-          >
-            <Subscript className="h-4 w-4" />
-          </Button>
+          {/* Removed Strikethrough, Superscript, Subscript */}
 
           <div className="h-6 w-px bg-border mx-1" />
 

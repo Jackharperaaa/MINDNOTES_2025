@@ -124,6 +124,16 @@ export const EditorBlock = ({
     };
   }, []);
 
+  const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a');
+    if (link && link.href) {
+      e.preventDefault(); // Prevent contenteditable from interfering
+      e.stopPropagation(); // Stop propagation to prevent other handlers
+      window.open(link.href, '_blank'); // Open link in new tab
+    }
+  };
+
   const commonProps = {
     onMouseUp: calculateToolbarPosition,
     onKeyUp: calculateToolbarPosition,
@@ -140,7 +150,8 @@ export const EditorBlock = ({
           setShowToolbar(false);
         }
       }, 100); // Short timeout to allow other elements to gain focus
-    }
+    },
+    onClick: handleContentClick, // Add click handler for links
   };
     
   const getStyleClasses = () => {
@@ -722,53 +733,41 @@ export const EditorBlock = ({
       
         default:
           return (
-            <div className="space-y-2">
-              <div
-                ref={contentEditableRef as RefObject<HTMLDivElement>}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={(e) => {
+            <div
+              ref={contentEditableRef as RefObject<HTMLDivElement>}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.target as HTMLDivElement;
+                updateContent(target.innerHTML);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   e.stopPropagation();
-                  const target = e.target as HTMLDivElement;
-                  updateContent(target.innerHTML);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onAddBlock(index + 1, 'text');
-                  } else if (e.key === 'Backspace' && (e.target as HTMLDivElement).innerHTML === '') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDelete(index);
-                  }
-                }}
-                className={cn(
-                  baseClasses, 
-                  "text-foreground min-h-[24px] outline-none border border-transparent focus:border-border rounded p-2",
-                  getStyleClasses()
-                )}
-                dangerouslySetInnerHTML={{ __html: block.content || '' }}
-                data-placeholder="Type something..."
-                style={{
-                  minHeight: '24px',
-                  wordWrap: 'break-word',
-                  whiteSpace: 'pre-wrap'
-                }}
-                {...commonProps}
-              />
-              {/* Preview Area */}
-              {block.content && (
-                <div className="p-3 bg-muted/30 rounded-md border border-muted">
-                  <div className="text-xs text-muted-foreground mb-2">Preview:</div>
-                  <div 
-                    className="text-sm prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: block.content }}
-                  />
-                </div>
+                  onAddBlock(index + 1, 'text');
+                } else if (e.key === 'Backspace' && (e.target as HTMLDivElement).innerHTML === '') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete(index);
+                }
+              }}
+              className={cn(
+                baseClasses, 
+                "text-foreground min-h-[24px] outline-none border border-transparent focus:border-border rounded p-2",
+                getStyleClasses()
               )}
-            </div>
+              dangerouslySetInnerHTML={{ __html: block.content || '' }}
+              data-placeholder="Type something..."
+              style={{
+                minHeight: '24px',
+                wordWrap: 'break-word',
+                whiteSpace: 'pre-wrap'
+              }}
+              {...commonProps}
+            />
           );
       }
     };
