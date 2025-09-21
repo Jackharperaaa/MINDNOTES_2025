@@ -156,6 +156,15 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
       default:
         onFormat(format, value); // Keep this for any custom formats
     }
+
+    // Explicitly re-select the range after applying the command
+    if (savedSelectionRange) {
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelectionRange);
+      }
+    }
   };
 
   const handleColorSelect = (color: string) => {
@@ -260,7 +269,10 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => applyFormat('bold')}
+            onClick={(e) => {
+              e.preventDefault(); // Prevent contentEditable from losing focus
+              applyFormat('bold');
+            }}
             title="Negrito"
           >
             <Bold className="h-4 w-4" />
@@ -270,7 +282,10 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => applyFormat('italic')}
+            onClick={(e) => {
+              e.preventDefault(); // Prevent contentEditable from losing focus
+              applyFormat('italic');
+            }}
             title="Itálico"
           >
             <Italic className="h-4 w-4" />
@@ -280,7 +295,10 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => applyFormat('underline')}
+            onClick={(e) => {
+              e.preventDefault(); // Prevent contentEditable from losing focus
+              applyFormat('underline');
+            }}
             title="Sublinhado"
           >
             <Underline className="h-4 w-4" />
@@ -295,6 +313,7 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
               size="sm"
               className="h-8 w-8 p-0"
               onClick={(e) => {
+                e.preventDefault(); // Prevent contentEditable from losing focus
                 e.stopPropagation();
                 setShowColorPalette(!showColorPalette);
               }}
@@ -312,6 +331,7 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             size="sm"
             className="h-8 w-8 p-0"
             onClick={(e) => {
+              e.preventDefault(); // Prevent contentEditable from losing focus
               e.stopPropagation();
               handleLinkClick();
             }}
@@ -337,15 +357,12 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
               transition={{ duration: 0.2 }}
               className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
               onMouseDown={(e) => {
-                e.preventDefault();
                 e.stopPropagation();
               }}
               onClick={(e) => {
-                e.preventDefault();
                 e.stopPropagation();
               }}
               onMouseUp={(e) => {
-                e.preventDefault();
                 e.stopPropagation();
               }}
             >
