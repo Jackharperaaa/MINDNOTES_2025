@@ -30,7 +30,7 @@ function Login() {
                   inputPlaceholder: 'hsl(var(--muted-foreground))',
                   messageText: 'hsl(var(--foreground))',
                   messageBackground: 'hsl(var(--accent))',
-                  messageActionHover: 'hsl(var(--accent-foreground))',
+                  // messageActionHover is not a valid property in ThemeSupa colors, removed.
                   anchorTextColor: 'hsl(var(--primary))',
                   anchorTextHoverColor: 'hsl(var(--primary-foreground))',
                 },
@@ -46,7 +46,7 @@ function Login() {
                 email_input_placeholder: t('emailPlaceholder'),
                 password_input_placeholder: t('passwordPlaceholder'),
                 button_label: t('signInButton'),
-                social_auth_button: t('signInWithSocial'),
+                social_provider_text: t('signInWithSocial'), // Corrected property name
                 link_text: t('alreadyHaveAccount'),
               },
               sign_up: {
@@ -55,7 +55,7 @@ function Login() {
                 email_input_placeholder: t('emailPlaceholder'),
                 password_input_placeholder: t('passwordPlaceholder'),
                 button_label: t('signUpButton'),
-                social_auth_button: t('signUpWithSocial'),
+                social_provider_text: t('signUpWithSocial'), // Corrected property name
                 link_text: t('dontHaveAccount'),
               },
               forgotten_password: {
