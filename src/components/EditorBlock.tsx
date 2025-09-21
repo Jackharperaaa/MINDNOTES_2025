@@ -7,7 +7,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { EditorBlock as BlockType } from '@/types';
 import { cn } from '@/lib/utils';
 import { TextFormattingToolbar } from './TextFormattingToolbar';
-import { LinkDialog } from './LinkDialog'; // Certifique-se de que LinkDialog está importado se for usado diretamente aqui antes
 
 interface EditorBlockProps {
   block: BlockType;
@@ -19,26 +18,23 @@ interface EditorBlockProps {
   level?: number;
 }
 
-export const EditorBlock = ({
-  block,
-  index,
-  onUpdate,
-  onDelete,
+export const EditorBlock = ({ 
+  block, 
+  index, 
+  onUpdate, 
+  onDelete, 
   onAddBlock,
   onCreateSubpage,
-  level = 0
+  level = 0 
 }: EditorBlockProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [showToolbar, setShowToolbar] = useState(false); // Isso agora apenas indica se o texto está selecionado
+  const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
-  const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({}); // Corrigido aqui
+  const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // A lógica de inicialização de blocos (se não houver blocos) pertence ao componente pai (BlockEditor).
-  // Removendo o useEffect redundante daqui.
 
   const updateContent = (content: string) => {
     onUpdate(index, { ...block, content });
@@ -53,9 +49,9 @@ export const EditorBlock = ({
   };
 
   const updateMetadata = (metadata: Partial<BlockType['metadata']>) => {
-    onUpdate(index, {
-      ...block,
-      metadata: { ...block.metadata, ...metadata }
+    onUpdate(index, { 
+      ...block, 
+      metadata: { ...block.metadata, ...metadata } 
     });
   };
 
@@ -87,56 +83,56 @@ export const EditorBlock = ({
   };
 
   const handleFormat = (format: string, value?: string) => {
-    // Esta função agora é tratada diretamente pela TextFormattingToolbar usando execCommand
-    // Mantemos para compatibilidade com versões anteriores, mas a barra de ferramentas lida com a formatação diretamente
+    // This function is now handled by the TextFormattingToolbar directly using execCommand
+    // We keep it for backward compatibility but the toolbar handles formatting directly
     setShowToolbar(false);
   };
 
   const renderContent = () => {
     const baseClasses = "w-full bg-transparent border-none outline-none resize-none";
+  
+  const getStyleClasses = () => {
+    const styleClasses = [];
+    if (block.style?.color) {
+      styleClasses.push(`text-[${block.style.color}]`);
+    }
+    if (block.style?.backgroundColor) {
+      styleClasses.push(`bg-[${block.style.backgroundColor}]`);
+    }
+    return styleClasses.join(' ');
+  };
 
-    const getStyleClasses = () => {
-      const styleClasses = [];
-      if (block.style?.color) {
-        styleClasses.push(`text-[${block.style.color}]`);
-      }
-      if (block.style?.backgroundColor) {
-        styleClasses.push(`bg-[${block.style.backgroundColor}]`);
-      }
-      return styleClasses.join(' ');
-    };
+  const truncateUrl = (url: string, maxLength: number = 30) => {
+    if (url.length <= maxLength) return url;
+    return url.substring(0, maxLength) + '...';
+  };
 
-    const truncateUrl = (url: string, maxLength: number = 30) => {
-      if (url.length <= maxLength) return url;
-      return url.substring(0, maxLength) + '...';
-    };
-
-    const copyToClipboard = async (text: string, key: string) => {
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopiedStates(prev => ({ ...prev, [key]: true }));
-        setTimeout(() => {
-          setCopiedStates(prev => ({ ...prev, [key]: false }));
-        }, 2000);
-      } catch (err) {
-        console.error('Failed to copy: ', err);
-      }
-    };
-
+  const copyToClipboard = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedStates(prev => ({ ...prev, [key]: true }));
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [key]: false }));
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  };
+    
     const calculateToolbarPosition = () => {
       const activeElement = inputRef.current;
       if (!activeElement) return;
 
       const rect = activeElement.getBoundingClientRect();
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-
-      // Posiciona a barra de ferramentas acima do input/textarea
-      const x = rect.left + rect.width / 2 - 200; // Centraliza horizontalmente (400px largura / 2)
-      const y = rect.top + scrollTop - 60; // 60px acima do elemento
-
-      setToolbarPosition({
-        x: Math.max(10, x), // Garante que não saia da borda esquerda
-        y: Math.max(10, y)  // Garante que não saia da borda superior
+      
+      // Position toolbar above the input/textarea
+      const x = rect.left + rect.width / 2 - 200; // Center horizontally (400px width / 2)
+      const y = rect.top + scrollTop - 60; // 60px above the element
+      
+      setToolbarPosition({ 
+        x: Math.max(10, x), // Ensure it doesn't go off the left edge
+        y: Math.max(10, y)  // Ensure it doesn't go off the top edge
       });
     };
 
@@ -170,12 +166,11 @@ export const EditorBlock = ({
         }, 0);
       },
       onBlur: () => {
-        // Esconde a barra de ferramentas após um pequeno atraso.
-        // A TextFormattingToolbar agora gerencia sua própria persistência para os diálogos.
-        setTimeout(() => setShowToolbar(false), 100);
+        // Keep toolbar visible for a longer time to allow color palette and link dialog interactions
+        setTimeout(() => setShowToolbar(false), 500);
       }
     };
-
+    
     switch (block.type) {
       case 'heading1':
         return (
@@ -239,14 +234,13 @@ export const EditorBlock = ({
                 }, 0);
               },
               onBlur: () => {
-                // Esconde a barra de ferramentas após um pequeno atraso.
-                // A TextFormattingToolbar agora gerencia sua própria persistência para os diálogos.
-                setTimeout(() => setShowToolbar(false), 100);
+                // Increase timeout to allow interaction with toolbar elements
+                setTimeout(() => setShowToolbar(false), 1000);
               }
             }}
           />
         );
-
+      
       case 'heading2':
         return (
           <div
@@ -309,14 +303,13 @@ export const EditorBlock = ({
                 }, 0);
               },
               onBlur: () => {
-                // Esconde a barra de ferramentas após um pequeno atraso.
-                // A TextFormattingToolbar agora gerencia sua própria persistência para os diálogos.
-                setTimeout(() => setShowToolbar(false), 100);
+                // Increase timeout to allow interaction with toolbar elements  
+                setTimeout(() => setShowToolbar(false), 1000);
               }
             }}
           />
         );
-
+      
       case 'heading3':
         return (
           <div
@@ -379,14 +372,13 @@ export const EditorBlock = ({
                 }, 0);
               },
               onBlur: () => {
-                // Esconde a barra de ferramentas após um pequeno atraso.
-                // A TextFormattingToolbar agora gerencia sua própria persistência para os diálogos.
-                setTimeout(() => setShowToolbar(false), 100);
+                // Increase timeout to allow interaction with toolbar elements
+                setTimeout(() => setShowToolbar(false), 1000);
               }
             }}
           />
         );
-
+      
       case 'code':
         return (
           <textarea
@@ -399,7 +391,7 @@ export const EditorBlock = ({
             {...commonProps}
           />
         );
-
+      
       case 'quote':
         return (
           <div className="border-l-4 border-primary pl-4 bg-accent/10">
@@ -414,7 +406,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       case 'highlight':
         return (
           <div className={cn(
@@ -436,7 +428,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       case 'bullet':
         return (
           <div className="flex items-start gap-2">
@@ -452,7 +444,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       case 'numbered':
         return (
           <div className="flex items-start gap-2">
@@ -468,7 +460,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       case 'checklist':
         return (
           <div className="flex items-start gap-2">
@@ -483,7 +475,7 @@ export const EditorBlock = ({
               onChange={(e) => updateContent(e.target.value)}
               onKeyDown={handleKeyDown}
               className={cn(
-                baseClasses,
+                baseClasses, 
                 "text-foreground min-h-[24px] flex-1",
                 block.checked && "line-through opacity-60"
               )}
@@ -492,7 +484,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       case 'toggle':
         return (
           <Collapsible open={!block.collapsed} onOpenChange={toggleCollapsed}>
@@ -519,7 +511,7 @@ export const EditorBlock = ({
             </CollapsibleContent>
           </Collapsible>
         );
-
+      
       case 'link':
         return (
           <div className="space-y-2">
@@ -571,7 +563,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       case 'image':
         const imageUrls = block.metadata?.urls || [];
         return (
@@ -612,7 +604,7 @@ export const EditorBlock = ({
                 />
               </label>
             </div>
-
+            
             {imageUrls.length > 0 && (
               <div className="grid grid-cols-3 gap-3">
                 {imageUrls.map((url, urlIndex) => (
@@ -651,7 +643,7 @@ export const EditorBlock = ({
                 ))}
               </div>
             )}
-
+            
             <input
               type="text"
               value={block.content}
@@ -661,7 +653,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       case 'video':
         return (
           <div className="space-y-2">
@@ -743,7 +735,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       case 'gif':
         const gifUrls = block.metadata?.urls || [];
         return (
@@ -784,7 +776,7 @@ export const EditorBlock = ({
                 />
               </label>
             </div>
-
+            
             {gifUrls.length > 0 && (
               <div className="grid grid-cols-3 gap-3">
                 {gifUrls.map((url, urlIndex) => (
@@ -823,7 +815,7 @@ export const EditorBlock = ({
                 ))}
               </div>
             )}
-
+            
             <input
               type="text"
               value={block.content}
@@ -833,7 +825,7 @@ export const EditorBlock = ({
             />
           </div>
         );
-
+      
       default:
         return (
           <div className="space-y-2">
@@ -841,25 +833,25 @@ export const EditorBlock = ({
               ref={inputRef as React.RefObject<HTMLDivElement>}
               contentEditable
               suppressContentEditableWarning
-              onInput={(e) => {
+            onInput={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const target = e.target as HTMLDivElement;
+              updateContent(target.innerHTML);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 e.stopPropagation();
-                const target = e.target as HTMLDivElement;
-                updateContent(target.innerHTML);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onAddBlock(index + 1, 'text');
-                } else if (e.key === 'Backspace' && (e.target as HTMLDivElement).innerHTML === '') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDelete(index);
-                }
-              }}
+                onAddBlock(index + 1, 'text');
+              } else if (e.key === 'Backspace' && (e.target as HTMLDivElement).innerHTML === '') {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete(index);
+              }
+            }}
               className={cn(
-                baseClasses,
+                baseClasses, 
                 "text-foreground min-h-[24px] outline-none border border-transparent focus:border-border rounded p-2",
                 getStyleClasses()
               )}
@@ -893,13 +885,21 @@ export const EditorBlock = ({
                     const selection = window.getSelection();
                     if (selection && selection.rangeCount > 0) {
                       const range = selection.getRangeAt(0);
+                      const hasSelection = !range.collapsed;
+                      setShowToolbar(hasSelection);
+                      if (hasSelection) {
+                        const rect = range.getBoundingClientRect();
+                        setToolbarPosition({
+                          x: rect.left + window.scrollX - 50,
+                          y: rect.top + window.scrollY - 50
+                        });
+                      }
                     }
                   }, 0);
                 },
                 onBlur: () => {
-                  // Esconde a barra de ferramentas após um pequeno atraso.
-                  // A TextFormattingToolbar agora gerencia sua própria persistência para os diálogos.
-                  setTimeout(() => setShowToolbar(false), 100);
+                  // Increase timeout to allow interaction with toolbar elements
+                  setTimeout(() => setShowToolbar(false), 1000);
                 }
               }}
             />
@@ -907,7 +907,7 @@ export const EditorBlock = ({
             {block.content && (
               <div className="p-3 bg-muted/30 rounded-md border border-muted">
                 <div className="text-xs text-muted-foreground mb-2">Preview:</div>
-                <div
+                <div 
                   className="text-sm prose prose-sm max-w-none"
                   dangerouslySetInnerHTML={{ __html: block.content }}
                 />
@@ -968,11 +968,13 @@ export const EditorBlock = ({
       </div>
 
       {/* Rich text formatting toolbar */}
-      <TextFormattingToolbar
-        onFormat={handleFormat}
-        visible={showToolbar} // Esta prop agora apenas indica se o texto está selecionado
-        position={toolbarPosition}
-      />
+      {showToolbar && (
+        <TextFormattingToolbar 
+          onFormat={handleFormat} 
+          visible={showToolbar}
+          position={toolbarPosition}
+        />
+      )}
 
       {/* Image expansion modal */}
       <AnimatePresence>
