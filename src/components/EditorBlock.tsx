@@ -837,6 +837,7 @@ export const EditorBlock = ({
           visible={showToolbar}
           position={toolbarPosition}
           savedSelectionRange={lastSelectionRange} // Pass the saved range
+          onSelectionChange={setLastSelectionRange} // Pass the setter for the saved range
         />
       )}
 

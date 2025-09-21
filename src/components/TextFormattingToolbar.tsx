@@ -19,6 +19,7 @@ interface TextFormattingToolbarProps {
   position?: { x: number; y: number };
   toolbarRef: RefObject<HTMLDivElement>; // Add toolbarRef prop
   savedSelectionRange: Range | null; // New prop to receive the saved selection
+  onSelectionChange: (range: Range | null) => void; // Callback to update parent's saved selection
 }
 
 // Convert HSB to RGB
@@ -56,7 +57,7 @@ const rgbToHex = (r: number, g: number, b: number) => {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
 
-export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y: 0 }, toolbarRef, savedSelectionRange }: TextFormattingToolbarProps) => {
+export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y: 0 }, toolbarRef, savedSelectionRange, onSelectionChange }: TextFormattingToolbarProps) => {
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
@@ -126,8 +127,12 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
         selection.removeAllRanges();
         selection.addRange(savedSelectionRange);
       }
+    } else {
+      console.warn("No saved selection range to apply format.");
+      return;
     }
 
+    // Apply the formatting command
     switch (format) {
       case 'bold':
         document.execCommand('bold', false);
@@ -157,13 +162,16 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
         onFormat(format, value); // Keep this for any custom formats
     }
 
-    // Explicitly re-select the range after applying the command
-    if (savedSelectionRange) {
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(savedSelectionRange);
-      }
+    // After applying format, re-get the *current* selection and re-add it.
+    // This ensures the selection remains active and valid for subsequent commands.
+    const newSelection = window.getSelection();
+    if (newSelection && !newSelection.isCollapsed && newSelection.rangeCount > 0) {
+      const newRange = newSelection.getRangeAt(0);
+      newSelection.removeAllRanges();
+      newSelection.addRange(newRange);
+      onSelectionChange(newRange); // Update parent's saved selection
+    } else {
+      onSelectionChange(null); // Clear selection if it's lost
     }
   };
 
@@ -357,12 +365,15 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
               transition={{ duration: 0.2 }}
               className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
               onMouseDown={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
               }}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
               }}
               onMouseUp={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
               }}
             >
