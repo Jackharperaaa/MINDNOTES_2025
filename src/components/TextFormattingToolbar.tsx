@@ -4,11 +4,8 @@ import {
   Bold, 
   Italic, 
   Underline, 
-  Code, // Keep Code if it's for inline code, not block
   Palette,
-  Highlighter,
   Link,
-  MessageSquare,
   X,
   Check
 } from 'lucide-react';
@@ -70,6 +67,9 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
   const [currentBrightness, setBrightness] = useState(100);
   const [selectedColor, setSelectedColor] = useState('#FF0000');
 
+  // State for draggable color picker position
+  const [colorPickerPosition, setColorPickerPosition] = useState({ x: 0, y: 0 });
+
   useEffect(() => {
     if (visible) {
       const selection = window.getSelection();
@@ -80,9 +80,19 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (showColorPalette && toolbarRef.current) {
+      const toolbarRect = toolbarRef.current.getBoundingClientRect();
+      // Position it below the toolbar, slightly to the right
+      setColorPickerPosition({
+        x: toolbarRect.left + window.scrollX + 50, // 50px offset from toolbar left
+        y: toolbarRect.bottom + window.scrollY + 10, // 10px below toolbar
+      });
+    }
+  }, [showColorPalette, toolbarRef]);
+
   const applyFormat = (format: string, value?: string) => {
     // Ensure the contentEditable element is focused before applying format
-    // This is crucial if the toolbar button click caused the contentEditable to blur
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
@@ -254,8 +264,6 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             <Underline className="h-4 w-4" />
           </Button>
 
-          {/* Removed Strikethrough, Superscript, Subscript */}
-
           <div className="h-6 w-px bg-border mx-1" />
 
           {/* Botão de Cor do Texto */}
@@ -272,129 +280,6 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             >
               <Palette className="h-4 w-4" />
             </Button>
-
-            {/* Photoshop-Style Color Picker */}
-            <AnimatePresence>
-              {showColorPalette && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: -10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute top-10 left-0 z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onMouseUp={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  {/* Header with close button */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-sm font-semibold text-foreground">Seletor de Cores</div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowColorPalette(false);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Color picker area */}
-                  <div className="flex gap-3 mb-4">
-                    {/* Main gradient area */}
-                    <div
-                      className="relative w-48 h-32 cursor-crosshair rounded border border-border overflow-hidden"
-                      style={{
-                        background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${currentHue}, 100%, 50%))`
-                      }}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleGradientClick(e);
-                      }}
-                    >
-                      {/* Crosshair indicator */}
-                      <div
-                        className="absolute w-2 h-2 border border-white rounded-full transform -translate-x-1 -translate-y-1 pointer-events-none"
-                        style={{
-                          left: `${currentSaturation}%`,
-                          top: `${100 - currentBrightness}%`,
-                          boxShadow: '0 0 0 1px rgba(0,0,0,0.5)'
-                        }}
-                      />
-                    </div>
-
-                    {/* Hue slider */}
-                    <div
-                      className="relative w-4 h-32 cursor-pointer rounded border border-border overflow-hidden"
-                      style={{
-                        background: 'linear-gradient(to bottom, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)'
-                      }}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleHueClick(e);
-                      }}
-                    >
-                      {/* Hue indicator */}
-                      <div
-                        className="absolute w-full h-1 border-t border-b border-white pointer-events-none"
-                        style={{
-                          top: `${(currentHue / 360) * 100}%`,
-                          boxShadow: '0 0 0 1px rgba(0,0,0,0.5)'
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Color preview */}
-                  <div className="flex gap-2 mb-3">
-                    <div className="flex-1">
-                      <div className="text-xs text-muted-foreground mb-1">Nova cor:</div>
-                      <div
-                        className="w-full h-8 rounded border border-border"
-                        style={{ backgroundColor: selectedColor }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Hex input */}
-                  <div className="mb-3">
-                    <div className="text-xs text-muted-foreground mb-1">Código hex:</div>
-                    <input
-                      type="text"
-                      value={selectedColor}
-                      onFocus={(e) => e.stopPropagation()}
-                      onBlur={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        const value = e.target.value;
-                        if (value.match(/^#[0-9A-Fa-f]{0,6}$/)) {
-                          setSelectedColor(value);
-                          if (value.length === 7) {
-                            handleColorSelect(value);
-                          }
-                        }
-                      }}
-                      className="w-full px-2 py-1 text-sm border border-border rounded bg-background text-foreground"
-                      placeholder="#000000"
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
 
           <div className="h-6 w-px bg-border mx-1" />
@@ -413,6 +298,132 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             <Link className="h-4 w-4" />
           </Button>
         </div>
+
+        {/* Photoshop-Style Color Picker (draggable) */}
+        <AnimatePresence>
+          {showColorPalette && (
+            <motion.div
+              drag
+              dragConstraints={{ left: 0, right: window.innerWidth - 300, top: 0, bottom: window.innerHeight - 300 }} // Assuming 300px width/height for picker
+              onDragEnd={(event, info) => {
+                setColorPickerPosition({ x: info.point.x, y: info.point.y });
+              }}
+              style={{ x: colorPickerPosition.x, y: colorPickerPosition.y }} // Use x, y for framer-motion drag
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+              className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onMouseUp={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              {/* Header with close button */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm font-semibold text-foreground">Seletor de Cores</div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowColorPalette(false);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Color picker area */}
+              <div className="flex gap-3 mb-4">
+                {/* Main gradient area */}
+                <div
+                  className="relative w-48 h-32 cursor-crosshair rounded border border-border overflow-hidden"
+                  style={{
+                    background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${currentHue}, 100%, 50%))`
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleGradientClick(e);
+                  }}
+                >
+                  {/* Crosshair indicator */}
+                  <div
+                    className="absolute w-2 h-2 border border-white rounded-full transform -translate-x-1 -translate-y-1 pointer-events-none"
+                    style={{
+                      left: `${currentSaturation}%`,
+                      top: `${100 - currentBrightness}%`,
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.5)'
+                    }}
+                  />
+                </div>
+
+                {/* Hue slider */}
+                <div
+                  className="relative w-4 h-32 cursor-pointer rounded border border-border overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(to bottom, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)'
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleHueClick(e);
+                  }}
+                >
+                  {/* Hue indicator */}
+                  <div
+                    className="absolute w-full h-1 border-t border-b border-white pointer-events-none"
+                    style={{
+                      top: `${(currentHue / 360) * 100}%`,
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.5)'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Color preview */}
+              <div className="flex gap-2 mb-3">
+                <div className="flex-1">
+                  <div className="text-xs text-muted-foreground mb-1">Nova cor:</div>
+                  <div
+                    className="w-full h-8 rounded border border-border"
+                    style={{ backgroundColor: selectedColor }}
+                  />
+                </div>
+              </div>
+
+              {/* Hex input */}
+              <div className="mb-3">
+                <div className="text-xs text-muted-foreground mb-1">Código hex:</div>
+                <input
+                  type="text"
+                  value={selectedColor}
+                  onFocus={(e) => e.stopPropagation()}
+                  onBlur={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    const value = e.target.value;
+                    if (value.match(/^#[0-9A-Fa-f]{0,6}$/)) {
+                      setSelectedColor(value);
+                      if (value.length === 7) {
+                        handleColorSelect(value);
+                      }
+                    }
+                  }}
+                  className="w-full px-2 py-1 text-sm border border-border rounded bg-background text-foreground"
+                  placeholder="#000000"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Dialog de Link Moderno */}
         <AnimatePresence>
