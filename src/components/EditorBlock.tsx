@@ -32,6 +32,7 @@ export const EditorBlock = ({
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
+  const [lastSelectionRange, setLastSelectionRange] = useState<Range | null>(null); // State to store the last active selection range
   
   const contentEditableRef = useRef<HTMLDivElement | HTMLTextAreaElement>(null);
   const blockContainerRef = useRef<HTMLDivElement>(null); // Ref for the entire EditorBlock
@@ -87,10 +88,13 @@ export const EditorBlock = ({
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
       setShowToolbar(false);
+      setLastSelectionRange(null); // Clear saved selection
       return;
     }
 
     const range = selection.getRangeAt(0);
+    setLastSelectionRange(range); // Save the current selection range
+
     const rect = range.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     
@@ -115,6 +119,7 @@ export const EditorBlock = ({
         !toolbarRef.current.contains(event.target as Node)
       ) {
         setShowToolbar(false);
+        setLastSelectionRange(null); // Clear selection when toolbar is hidden
       }
     };
 
@@ -139,17 +144,20 @@ export const EditorBlock = ({
     onKeyUp: calculateToolbarPosition,
     onFocus: calculateToolbarPosition, // Show toolbar on focus if there's a selection
     onBlur: () => {
-      // Do not hide toolbar immediately on blur.
-      // The global click listener will handle hiding if focus moves completely outside.
-      // This timeout is a fallback to hide if the global listener somehow misses it,
-      // or if the user just clicks away without interacting with toolbar.
+      // When contentEditable blurs, we need to save the selection
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        setLastSelectionRange(selection.getRangeAt(0));
+      } else {
+        setLastSelectionRange(null);
+      }
+      // Delay hiding the toolbar to allow interaction with it
       setTimeout(() => {
-        const selection = window.getSelection();
-        if (!selection || selection.isCollapsed) {
-          // If no selection, hide toolbar
+        const currentSelection = window.getSelection();
+        if (!currentSelection || currentSelection.isCollapsed) {
           setShowToolbar(false);
         }
-      }, 100); // Short timeout to allow other elements to gain focus
+      }, 100);
     },
     onClick: handleContentClick, // Add click handler for links
   };
@@ -828,6 +836,7 @@ export const EditorBlock = ({
           onFormat={() => {}} // onFormat is not directly used by toolbar anymore
           visible={showToolbar}
           position={toolbarPosition}
+          savedSelectionRange={lastSelectionRange} // Pass the saved range
         />
       )}
 

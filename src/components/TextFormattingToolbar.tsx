@@ -18,6 +18,7 @@ interface TextFormattingToolbarProps {
   visible: boolean;
   position?: { x: number; y: number };
   toolbarRef: RefObject<HTMLDivElement>; // Add toolbarRef prop
+  savedSelectionRange: Range | null; // New prop to receive the saved selection
 }
 
 // Convert HSB to RGB
@@ -55,7 +56,7 @@ const rgbToHex = (r: number, g: number, b: number) => {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
 
-export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y: 0 }, toolbarRef }: TextFormattingToolbarProps) => {
+export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y: 0 }, toolbarRef, savedSelectionRange }: TextFormattingToolbarProps) => {
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
@@ -81,27 +82,49 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
   }, [visible]);
 
   useEffect(() => {
-    if (showColorPalette && toolbarRef.current) {
-      const toolbarRect = toolbarRef.current.getBoundingClientRect();
-      // Position it below the toolbar, slightly to the right
+    if (showColorPalette && savedSelectionRange) {
+      const selectionRect = savedSelectionRange.getBoundingClientRect();
+      // Position it to the right of the selection, or below if not enough space
+      const pickerWidth = 300; // Approximate width of the color picker
+      const pickerHeight = 300; // Approximate height
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      let initialX = selectionRect.right + window.scrollX + 20; // 20px to the right of selection
+      let initialY = selectionRect.top + window.scrollY;
+
+      // Adjust if it goes off right
+      if (initialX + pickerWidth > viewportWidth) {
+        initialX = selectionRect.left + window.scrollX - pickerWidth - 20;
+        // If it still goes off left, try to center it
+        if (initialX < 0) {
+          initialX = (viewportWidth - pickerWidth) / 2;
+        }
+      }
+
+      // Adjust if it goes off bottom
+      if (initialY + pickerHeight > viewportHeight) {
+        initialY = selectionRect.bottom + window.scrollY - pickerHeight - 20;
+        // If it still goes off top, try to center it
+        if (initialY < 0) {
+          initialY = (viewportHeight - pickerHeight) / 2;
+        }
+      }
+
       setColorPickerPosition({
-        x: toolbarRect.left + window.scrollX + 50, // 50px offset from toolbar left
-        y: toolbarRect.bottom + window.scrollY + 10, // 10px below toolbar
+        x: initialX,
+        y: initialY,
       });
     }
-  }, [showColorPalette, toolbarRef]);
+  }, [showColorPalette, savedSelectionRange]); // Depend on savedSelectionRange
 
   const applyFormat = (format: string, value?: string) => {
-    // Ensure the contentEditable element is focused before applying format
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      // Restore selection if it was lost due to blur
-      if (range.startContainer.nodeType === Node.ELEMENT_NODE && (range.startContainer as HTMLElement).contentEditable === 'true') {
-        // The selection is still within a contentEditable, good.
-      } else {
-        // Try to re-focus the original contentEditable if possible
-        // For now, rely on execCommand working on the last active contentEditable.
+    // Restore the selection before applying the command
+    if (savedSelectionRange) {
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelectionRange);
       }
     }
 
@@ -131,8 +154,7 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
         }
         break;
       default:
-        // Fallback for other formats if needed, though execCommand covers most basic ones
-        onFormat(format, value);
+        onFormat(format, value); // Keep this for any custom formats
     }
   };
 
@@ -315,12 +337,15 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
               transition={{ duration: 0.2 }}
               className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
               onMouseDown={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
               }}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
               }}
               onMouseUp={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
               }}
             >
