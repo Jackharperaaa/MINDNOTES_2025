@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
-import { BookOpen, MessageCircle, Zap } from 'lucide-react';
+import { BookOpen, MessageCircle, Zap, LogOut } from 'lucide-react';
 import { AppState } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { toast } from 'sonner'; // Import sonner for notifications
 
 interface SidebarProps {
   activeTab: AppState['activeTab'];
@@ -14,6 +16,16 @@ export const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
     { id: 'notes' as const, label: t('notes'), icon: BookOpen },
     { id: 'chat' as const, label: t('aiChat'), icon: MessageCircle },
   ];
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error logging out:', error.message);
+      toast.error(t('logoutError'));
+    } else {
+      toast.success(t('logoutSuccess'));
+    }
+  };
 
   return (
     <div className="w-64 bg-gradient-main border-r border-border flex flex-col">
@@ -62,6 +74,19 @@ export const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
           })}
         </div>
       </nav>
+
+      {/* Logout Button */}
+      <div className="p-4 border-t border-border">
+        <motion.button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-md font-medium text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+          whileHover={{ x: 2 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="font-medium">{t('logout')}</span>
+        </motion.button>
+      </div>
     </div>
   );
 };
