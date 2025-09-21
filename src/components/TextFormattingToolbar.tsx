@@ -94,7 +94,6 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
         // The selection is still within a contentEditable, good.
       } else {
         // Try to re-focus the original contentEditable if possible
-        // This is a tricky part, as we don't have direct access to the contentEditable element here.
         // For now, rely on execCommand working on the last active contentEditable.
       }
     }
