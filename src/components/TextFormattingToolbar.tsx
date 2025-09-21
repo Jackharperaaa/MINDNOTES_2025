@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, RefObject } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bold, 
@@ -23,14 +23,8 @@ interface TextFormattingToolbarProps {
   onFormat: (format: string, value?: string) => void;
   visible: boolean;
   position?: { x: number; y: number };
+  toolbarRef: RefObject<HTMLDivElement>; // Add toolbarRef prop
 }
-
-interface SelectionPosition {
-  x: number;
-  y: number;
-  visible: boolean;
-}
-
 
 // Convert HSB to RGB
 const hsbToRgb = (h: number, s: number, b: number) => {
@@ -67,21 +61,18 @@ const rgbToHex = (r: number, g: number, b: number) => {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
 
-export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y: 0 } }: TextFormattingToolbarProps) => {
-  const toolbarRef = useRef<HTMLDivElement>(null);
+export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y: 0 }, toolbarRef }: TextFormattingToolbarProps) => {
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
   const [selectedText, setSelectedText] = useState('');
   
-  // Photoshop-style color picker state
   const [currentHue, setCurrentHue] = useState(0);
   const [currentSaturation, setSaturation] = useState(100);
   const [currentBrightness, setBrightness] = useState(100);
   const [selectedColor, setSelectedColor] = useState('#FF0000');
 
-  // Captura o texto selecionado quando o toolbar aparece
   useEffect(() => {
     if (visible) {
       const selection = window.getSelection();
@@ -93,7 +84,21 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
   }, [visible]);
 
   const applyFormat = (format: string, value?: string) => {
-    // Use execCommand para formatação de rich text
+    // Ensure the contentEditable element is focused before applying format
+    // This is crucial if the toolbar button click caused the contentEditable to blur
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      // Restore selection if it was lost due to blur
+      if (range.startContainer.nodeType === Node.ELEMENT_NODE && (range.startContainer as HTMLElement).contentEditable === 'true') {
+        // The selection is still within a contentEditable, good.
+      } else {
+        // Try to re-focus the original contentEditable if possible
+        // This is a tricky part, as we don't have direct access to the contentEditable element here.
+        // For now, rely on execCommand working on the last active contentEditable.
+      }
+    }
+
     switch (format) {
       case 'bold':
         document.execCommand('bold', false);
@@ -104,9 +109,23 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
       case 'underline':
         document.execCommand('underline', false);
         break;
+      case 'strikethrough':
+        document.execCommand('strikeThrough', false);
+        break;
+      case 'superscript':
+        document.execCommand('superscript', false);
+        break;
+      case 'subscript':
+        document.execCommand('subscript', false);
+        break;
       case 'color':
         if (value) {
           document.execCommand('foreColor', false, value);
+        }
+        break;
+      case 'highlight': // Background color for highlight
+        if (value) {
+          document.execCommand('backColor', false, value);
         }
         break;
       case 'link':
@@ -115,37 +134,19 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
         }
         break;
       default:
+        // Fallback for other formats if needed, though execCommand covers most basic ones
         onFormat(format, value);
     }
   };
 
   const handleColorSelect = (color: string) => {
-    // Apply color immediately and provide visual feedback
     applyFormat('color', color);
-    
-    // Add a subtle animation to show color was applied
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed) {
-      const range = selection.getRangeAt(0);
-      const span = document.createElement('span');
-      span.style.color = color;
-      span.style.transition = 'all 0.3s ease';
-      
-      try {
-        range.surroundContents(span);
-        // Brief highlight effect
-        span.style.backgroundColor = color + '20';
-        setTimeout(() => {
-          span.style.backgroundColor = 'transparent';
-        }, 300);
-      } catch (e) {
-        // Fallback for complex selections
-        document.execCommand('foreColor', false, color);
-      }
-    }
   };
 
-  // Handle gradient area click
+  const handleHighlightSelect = (color: string) => {
+    applyFormat('highlight', color);
+  };
+
   const handleGradientClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -160,10 +161,9 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
     const rgb = hsbToRgb(currentHue, saturation, brightness);
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
     setSelectedColor(hex);
-    handleColorSelect(hex);
+    handleColorSelect(hex); // Apply text color
   };
 
-  // Handle hue slider click
   const handleHueClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -175,7 +175,7 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
     const rgb = hsbToRgb(hue, currentSaturation, currentBrightness);
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
     setSelectedColor(hex);
-    handleColorSelect(hex);
+    handleColorSelect(hex); // Apply text color
   };
 
   const handleLinkClick = () => {
@@ -192,7 +192,6 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
 
   const handleLinkSubmit = () => {
     if (linkUrl.trim()) {
-      // Valida se é uma URL válida
       let validUrl = linkUrl.trim();
       if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
         validUrl = 'https://' + validUrl;
@@ -221,7 +220,7 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
   return (
     <AnimatePresence>
       <motion.div
-        ref={toolbarRef}
+        ref={toolbarRef} // Assign the passed ref here
         initial={{ opacity: 0, scale: 0.9, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -231,6 +230,10 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
           left: position.x,
           top: position.y,
         }}
+        // Crucial: Stop propagation for all mouse events on the toolbar itself
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-1">
           {/* Formatação básica */}
@@ -262,6 +265,36 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
             title="Sublinhado"
           >
             <Underline className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('strikethrough')}
+            title="Tachado"
+          >
+            <Strikethrough className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('superscript')}
+            title="Sobrescrito"
+          >
+            <Superscript className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('subscript')}
+            title="Subscrito"
+          >
+            <Subscript className="h-4 w-4" />
           </Button>
 
           <div className="h-6 w-px bg-border mx-1" />

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, RefObject } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronDown, Plus, FileText, Trash2, Link, Image, Video, FileImage, Copy, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,14 +27,15 @@ export const EditorBlock = ({
   onCreateSubpage,
   level = 0 
 }: EditorBlockProps) => {
-  const [isEditing, setIsEditing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const contentEditableRef = useRef<HTMLDivElement | HTMLTextAreaElement>(null);
+  const blockContainerRef = useRef<HTMLDivElement>(null); // Ref for the entire EditorBlock
+  const toolbarRef = useRef<HTMLDivElement>(null); // Ref for the TextFormattingToolbar
 
   const updateContent = (content: string) => {
     onUpdate(index, { ...block, content });
@@ -75,22 +76,73 @@ export const EditorBlock = ({
       } else {
         onAddBlock(index + 1, 'text');
       }
-    } else if (e.key === 'Backspace' && block.content === '') {
+    } else if (e.key === 'Backspace' && (contentEditableRef.current?.innerHTML === '' || (contentEditableRef.current instanceof HTMLTextAreaElement && contentEditableRef.current?.value === ''))) {
       e.preventDefault();
       e.stopPropagation();
       onDelete(index);
     }
   };
 
-  const handleFormat = (format: string, value?: string) => {
-    // This function is now handled by the TextFormattingToolbar directly using execCommand
-    // We keep it for backward compatibility but the toolbar handles formatting directly
-    setShowToolbar(false);
+  const calculateToolbarPosition = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setShowToolbar(false);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    
+    // Position toolbar above the selection
+    const x = rect.left + window.scrollX + rect.width / 2 - 150; // Center horizontally (toolbar width ~300px / 2)
+    const y = rect.top + scrollTop - 50; // 50px above the selection
+    
+    setToolbarPosition({ 
+      x: Math.max(10, x), // Ensure it doesn't go off the left edge
+      y: Math.max(10, y)  // Ensure it doesn't go off the top edge
+    });
+    setShowToolbar(true);
   };
 
-  const renderContent = () => {
-    const baseClasses = "w-full bg-transparent border-none outline-none resize-none";
-  
+  // Global click listener to hide toolbar if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        blockContainerRef.current && 
+        !blockContainerRef.current.contains(event.target as Node) &&
+        toolbarRef.current &&
+        !toolbarRef.current.contains(event.target as Node)
+      ) {
+        setShowToolbar(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const commonProps = {
+    onMouseUp: calculateToolbarPosition,
+    onKeyUp: calculateToolbarPosition,
+    onFocus: calculateToolbarPosition, // Show toolbar on focus if there's a selection
+    onBlur: () => {
+      // Do not hide toolbar immediately on blur.
+      // The global click listener will handle hiding if focus moves completely outside.
+      // This timeout is a fallback to hide if the global listener somehow misses it,
+      // or if the user just clicks away without interacting with toolbar.
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed) {
+          // If no selection, hide toolbar
+          setShowToolbar(false);
+        }
+      }, 100); // Short timeout to allow other elements to gain focus
+    }
+  };
+    
   const getStyleClasses = () => {
     const styleClasses = [];
     if (block.style?.color) {
@@ -119,63 +171,13 @@ export const EditorBlock = ({
     }
   };
     
-    const calculateToolbarPosition = () => {
-      const activeElement = inputRef.current;
-      if (!activeElement) return;
+    const baseClasses = "w-full bg-transparent border-none outline-none resize-none";
 
-      const rect = activeElement.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      
-      // Position toolbar above the input/textarea
-      const x = rect.left + rect.width / 2 - 200; // Center horizontally (400px width / 2)
-      const y = rect.top + scrollTop - 60; // 60px above the element
-      
-      setToolbarPosition({ 
-        x: Math.max(10, x), // Ensure it doesn't go off the left edge
-        y: Math.max(10, y)  // Ensure it doesn't go off the top edge
-      });
-    };
-
-    const commonProps = {
-      onMouseUp: () => {
-        setTimeout(() => {
-          const activeElement = inputRef.current;
-          if (activeElement) {
-            const start = activeElement.selectionStart || 0;
-            const end = activeElement.selectionEnd || 0;
-            const hasSelection = start !== end;
-            setShowToolbar(hasSelection);
-            if (hasSelection) {
-              calculateToolbarPosition();
-            }
-          }
-        }, 0);
-      },
-      onKeyUp: () => {
-        setTimeout(() => {
-          const activeElement = inputRef.current;
-          if (activeElement) {
-            const start = activeElement.selectionStart || 0;
-            const end = activeElement.selectionEnd || 0;
-            const hasSelection = start !== end;
-            setShowToolbar(hasSelection);
-            if (hasSelection) {
-              calculateToolbarPosition();
-            }
-          }
-        }, 0);
-      },
-      onBlur: () => {
-        // Keep toolbar visible for a longer time to allow color palette and link dialog interactions
-        setTimeout(() => setShowToolbar(false), 500);
-      }
-    };
-    
     switch (block.type) {
       case 'heading1':
         return (
           <div
-            ref={inputRef as React.RefObject<HTMLDivElement>}
+            ref={contentEditableRef as RefObject<HTMLDivElement>}
             contentEditable
             suppressContentEditableWarning
             onInput={(e) => {
@@ -198,53 +200,14 @@ export const EditorBlock = ({
             className={cn(baseClasses, "text-3xl font-bold text-foreground min-h-[48px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
             dangerouslySetInnerHTML={{ __html: block.content || '' }}
             data-placeholder="Heading 1"
-            {...{
-              onMouseUp: () => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const hasSelection = !range.collapsed;
-                    setShowToolbar(hasSelection);
-                    if (hasSelection) {
-                      const rect = range.getBoundingClientRect();
-                      setToolbarPosition({
-                        x: rect.left + window.scrollX - 50,
-                        y: rect.top + window.scrollY - 50
-                      });
-                    }
-                  }
-                }, 0);
-              },
-              onKeyUp: () => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const hasSelection = !range.collapsed;
-                    setShowToolbar(hasSelection);
-                    if (hasSelection) {
-                      const rect = range.getBoundingClientRect();
-                      setToolbarPosition({
-                        x: rect.left + window.scrollX - 50,
-                        y: rect.top + window.scrollY - 50
-                      });
-                    }
-                  }
-                }, 0);
-              },
-              onBlur: () => {
-                // Increase timeout to allow interaction with toolbar elements
-                setTimeout(() => setShowToolbar(false), 1000);
-              }
-            }}
+            {...commonProps}
           />
         );
       
       case 'heading2':
         return (
           <div
-            ref={inputRef as React.RefObject<HTMLDivElement>}
+            ref={contentEditableRef as RefObject<HTMLDivElement>}
             contentEditable
             suppressContentEditableWarning
             onInput={(e) => {
@@ -267,53 +230,14 @@ export const EditorBlock = ({
             className={cn(baseClasses, "text-2xl font-semibold text-foreground min-h-[40px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
             dangerouslySetInnerHTML={{ __html: block.content || '' }}
             data-placeholder="Heading 2"
-            {...{
-              onMouseUp: () => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const hasSelection = !range.collapsed;
-                    setShowToolbar(hasSelection);
-                    if (hasSelection) {
-                      const rect = range.getBoundingClientRect();
-                      setToolbarPosition({
-                        x: rect.left + window.scrollX - 50,
-                        y: rect.top + window.scrollY - 50
-                      });
-                    }
-                  }
-                }, 0);
-              },
-              onKeyUp: () => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const hasSelection = !range.collapsed;
-                    setShowToolbar(hasSelection);
-                    if (hasSelection) {
-                      const rect = range.getBoundingClientRect();
-                      setToolbarPosition({
-                        x: rect.left + window.scrollX - 50,
-                        y: rect.top + window.scrollY - 50
-                      });
-                    }
-                  }
-                }, 0);
-              },
-              onBlur: () => {
-                // Increase timeout to allow interaction with toolbar elements  
-                setTimeout(() => setShowToolbar(false), 1000);
-              }
-            }}
+            {...commonProps}
           />
         );
       
       case 'heading3':
         return (
           <div
-            ref={inputRef as React.RefObject<HTMLDivElement>}
+            ref={contentEditableRef as RefObject<HTMLDivElement>}
             contentEditable
             suppressContentEditableWarning
             onInput={(e) => {
@@ -336,53 +260,14 @@ export const EditorBlock = ({
             className={cn(baseClasses, "text-xl font-medium text-foreground min-h-[32px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
             dangerouslySetInnerHTML={{ __html: block.content || '' }}
             data-placeholder="Heading 3"
-            {...{
-              onMouseUp: () => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const hasSelection = !range.collapsed;
-                    setShowToolbar(hasSelection);
-                    if (hasSelection) {
-                      const rect = range.getBoundingClientRect();
-                      setToolbarPosition({
-                        x: rect.left + window.scrollX - 50,
-                        y: rect.top + window.scrollY - 50
-                      });
-                    }
-                  }
-                }, 0);
-              },
-              onKeyUp: () => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const hasSelection = !range.collapsed;
-                    setShowToolbar(hasSelection);
-                    if (hasSelection) {
-                      const rect = range.getBoundingClientRect();
-                      setToolbarPosition({
-                        x: rect.left + window.scrollX - 50,
-                        y: rect.top + window.scrollY - 50
-                      });
-                    }
-                  }
-                }, 0);
-              },
-              onBlur: () => {
-                // Increase timeout to allow interaction with toolbar elements
-                setTimeout(() => setShowToolbar(false), 1000);
-              }
-            }}
+            {...commonProps}
           />
         );
       
       case 'code':
         return (
           <textarea
-            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+            ref={contentEditableRef as RefObject<HTMLTextAreaElement>}
             value={block.content}
             onChange={(e) => updateContent(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -396,7 +281,7 @@ export const EditorBlock = ({
         return (
           <div className="border-l-4 border-primary pl-4 bg-accent/10">
             <textarea
-              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              ref={contentEditableRef as RefObject<HTMLTextAreaElement>}
               value={block.content}
               onChange={(e) => updateContent(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -418,7 +303,7 @@ export const EditorBlock = ({
             !block.style?.backgroundColor && "bg-accent/20 border-primary"
           )}>
             <textarea
-              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              ref={contentEditableRef as RefObject<HTMLTextAreaElement>}
               value={block.content}
               onChange={(e) => updateContent(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -434,7 +319,7 @@ export const EditorBlock = ({
           <div className="flex items-start gap-2">
             <span className="text-foreground mt-2">•</span>
             <textarea
-              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              ref={contentEditableRef as RefObject<HTMLTextAreaElement>}
               value={block.content}
               onChange={(e) => updateContent(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -450,7 +335,7 @@ export const EditorBlock = ({
           <div className="flex items-start gap-2">
             <span className="text-foreground mt-2">{index + 1}.</span>
             <textarea
-              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              ref={contentEditableRef as RefObject<HTMLTextAreaElement>}
               value={block.content}
               onChange={(e) => updateContent(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -470,7 +355,7 @@ export const EditorBlock = ({
               className="mt-1"
             />
             <textarea
-              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+              ref={contentEditableRef as RefObject<HTMLTextAreaElement>}
               value={block.content}
               onChange={(e) => updateContent(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -539,6 +424,7 @@ export const EditorBlock = ({
                   onChange={(e) => updateMetadata({ url: e.target.value })}
                   placeholder="Enter URL..."
                   className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground"
+                  {...commonProps} // Apply common props to allow toolbar interaction
                 />
               )}
             </div>
@@ -560,6 +446,7 @@ export const EditorBlock = ({
               onChange={(e) => updateContent(e.target.value)}
               placeholder="Link text..."
               className="w-full bg-transparent text-foreground placeholder:text-muted-foreground"
+              {...commonProps} // Apply common props to allow toolbar interaction
             />
           </div>
         );
@@ -583,6 +470,7 @@ export const EditorBlock = ({
                     }
                   }
                 }}
+                {...commonProps} // Apply common props to allow toolbar interaction
               />
               <label className="bg-black text-white px-3 py-1 rounded text-xs cursor-pointer hover:bg-gray-800 transition-colors">
                 UPLOAD
@@ -650,6 +538,7 @@ export const EditorBlock = ({
               onChange={(e) => updateContent(e.target.value)}
               placeholder="Image caption..."
               className="w-full bg-transparent text-foreground placeholder:text-muted-foreground text-sm"
+              {...commonProps} // Apply common props to allow toolbar interaction
             />
           </div>
         );
@@ -681,6 +570,7 @@ export const EditorBlock = ({
                   onChange={(e) => updateMetadata({ url: e.target.value })}
                   placeholder="Video URL..."
                   className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground"
+                  {...commonProps} // Apply common props to allow toolbar interaction
                 />
               )}
               <label className="bg-black text-white px-3 py-1 rounded text-xs cursor-pointer hover:bg-gray-800 transition-colors">
@@ -732,6 +622,7 @@ export const EditorBlock = ({
               onChange={(e) => updateContent(e.target.value)}
               placeholder="Video caption..."
               className="w-full bg-transparent text-foreground placeholder:text-muted-foreground text-sm"
+              {...commonProps} // Apply common props to allow toolbar interaction
             />
           </div>
         );
@@ -755,6 +646,7 @@ export const EditorBlock = ({
                     }
                   }
                 }}
+                {...commonProps} // Apply common props to allow toolbar interaction
               />
               <label className="bg-black text-white px-3 py-1 rounded text-xs cursor-pointer hover:bg-gray-800 transition-colors">
                 UPLOAD
@@ -822,6 +714,7 @@ export const EditorBlock = ({
               onChange={(e) => updateContent(e.target.value)}
               placeholder="GIF caption..."
               className="w-full bg-transparent text-foreground placeholder:text-muted-foreground text-sm"
+              {...commonProps} // Apply common props to allow toolbar interaction
             />
           </div>
         );
@@ -830,7 +723,7 @@ export const EditorBlock = ({
         return (
           <div className="space-y-2">
             <div
-              ref={inputRef as React.RefObject<HTMLDivElement>}
+              ref={contentEditableRef as RefObject<HTMLDivElement>}
               contentEditable
               suppressContentEditableWarning
             onInput={(e) => {
@@ -862,46 +755,7 @@ export const EditorBlock = ({
                 wordWrap: 'break-word',
                 whiteSpace: 'pre-wrap'
               }}
-              {...{
-                onMouseUp: () => {
-                  setTimeout(() => {
-                    const selection = window.getSelection();
-                    if (selection && selection.rangeCount > 0) {
-                      const range = selection.getRangeAt(0);
-                      const hasSelection = !range.collapsed;
-                      setShowToolbar(hasSelection);
-                      if (hasSelection) {
-                        const rect = range.getBoundingClientRect();
-                        setToolbarPosition({
-                          x: rect.left + window.scrollX - 50,
-                          y: rect.top + window.scrollY - 50
-                        });
-                      }
-                    }
-                  }, 0);
-                },
-                onKeyUp: () => {
-                  setTimeout(() => {
-                    const selection = window.getSelection();
-                    if (selection && selection.rangeCount > 0) {
-                      const range = selection.getRangeAt(0);
-                      const hasSelection = !range.collapsed;
-                      setShowToolbar(hasSelection);
-                      if (hasSelection) {
-                        const rect = range.getBoundingClientRect();
-                        setToolbarPosition({
-                          x: rect.left + window.scrollX - 50,
-                          y: rect.top + window.scrollY - 50
-                        });
-                      }
-                    }
-                  }, 0);
-                },
-                onBlur: () => {
-                  // Increase timeout to allow interaction with toolbar elements
-                  setTimeout(() => setShowToolbar(false), 1000);
-                }
-              }}
+              {...commonProps}
             />
             {/* Preview Area */}
             {block.content && (
@@ -920,7 +774,7 @@ export const EditorBlock = ({
 
   return (
     <motion.div
-      ref={containerRef}
+      ref={blockContainerRef} // Assign ref to the outermost div of EditorBlock
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -970,7 +824,8 @@ export const EditorBlock = ({
       {/* Rich text formatting toolbar */}
       {showToolbar && (
         <TextFormattingToolbar 
-          onFormat={handleFormat} 
+          toolbarRef={toolbarRef} // Pass the ref here
+          onFormat={() => {}} // onFormat is not directly used by toolbar anymore
           visible={showToolbar}
           position={toolbarPosition}
         />
