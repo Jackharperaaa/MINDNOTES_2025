@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { EditorBlock as BlockType } from '@/types';
 import { cn } from '@/lib/utils';
 import { TextFormattingToolbar } from './TextFormattingToolbar';
+import { ContentEditableDiv } from './ContentEditableDiv'; // Import the new component
 
 interface EditorBlockProps {
   block: BlockType;
@@ -196,16 +197,10 @@ export const EditorBlock = ({
       switch (block.type) {
         case 'heading1':
           return (
-            <div
+            <ContentEditableDiv
               ref={contentEditableRef as RefObject<HTMLDivElement>}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const target = e.target as HTMLDivElement;
-                updateContent(target.innerHTML);
-              }}
+              initialHTML={block.content || ''}
+              onBlur={(html) => updateContent(html)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -218,7 +213,6 @@ export const EditorBlock = ({
                 }
               }}
               className={cn(baseClasses, "text-3xl font-bold text-foreground min-h-[48px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
-              dangerouslySetInnerHTML={{ __html: block.content || '' }}
               data-placeholder="Heading 1"
               {...commonProps}
             />
@@ -226,16 +220,10 @@ export const EditorBlock = ({
         
         case 'heading2':
           return (
-            <div
+            <ContentEditableDiv
               ref={contentEditableRef as RefObject<HTMLDivElement>}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const target = e.target as HTMLDivElement;
-                updateContent(target.innerHTML);
-              }}
+              initialHTML={block.content || ''}
+              onBlur={(html) => updateContent(html)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -248,7 +236,6 @@ export const EditorBlock = ({
                 }
               }}
               className={cn(baseClasses, "text-2xl font-semibold text-foreground min-h-[40px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
-              dangerouslySetInnerHTML={{ __html: block.content || '' }}
               data-placeholder="Heading 2"
               {...commonProps}
             />
@@ -256,16 +243,10 @@ export const EditorBlock = ({
         
         case 'heading3':
           return (
-            <div
+            <ContentEditableDiv
               ref={contentEditableRef as RefObject<HTMLDivElement>}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const target = e.target as HTMLDivElement;
-                updateContent(target.innerHTML);
-              }}
+              initialHTML={block.content || ''}
+              onBlur={(html) => updateContent(html)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -278,7 +259,6 @@ export const EditorBlock = ({
                 }
               }}
               className={cn(baseClasses, "text-xl font-medium text-foreground min-h-[32px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
-              dangerouslySetInnerHTML={{ __html: block.content || '' }}
               data-placeholder="Heading 3"
               {...commonProps}
             />
@@ -741,16 +721,10 @@ export const EditorBlock = ({
       
         default:
           return (
-            <div
+            <ContentEditableDiv
               ref={contentEditableRef as RefObject<HTMLDivElement>}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const target = e.target as HTMLDivElement;
-                updateContent(target.innerHTML);
-              }}
+              initialHTML={block.content || ''}
+              onBlur={(html) => updateContent(html)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -767,7 +741,6 @@ export const EditorBlock = ({
                 "text-foreground min-h-[24px] outline-none border border-transparent focus:border-border rounded p-2",
                 getStyleClasses()
               )}
-              dangerouslySetInnerHTML={{ __html: block.content || '' }}
               data-placeholder="Type something..."
               style={{
                 minHeight: '24px',

@@ -170,6 +170,12 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
       newSelection.removeAllRanges();
       newSelection.addRange(newRange);
       onSelectionChange(newRange); // Update parent's saved selection
+
+      // Attempt to re-focus the contentEditable element if possible
+      const parentContentEditable = newRange.commonAncestorContainer.parentElement?.closest('[contenteditable="true"]');
+      if (parentContentEditable instanceof HTMLElement) {
+        parentContentEditable.focus();
+      }
     } else {
       onSelectionChange(null); // Clear selection if it's lost
     }
