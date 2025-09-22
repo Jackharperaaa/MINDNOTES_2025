@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, RefObject } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion'; // Import useDragControls
 import { 
   Bold, 
   Italic, 
@@ -71,6 +71,9 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
 
   // State for draggable color picker position
   const [colorPickerPosition, setColorPickerPosition] = useState({ x: 0, y: 0 });
+
+  // Initialize drag controls for the color picker
+  const dragControls = useDragControls();
 
   useEffect(() => {
     if (visible) {
@@ -359,7 +362,9 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
         <AnimatePresence>
           {showColorPalette && (
             <motion.div
-              drag
+              drag // Enable dragging
+              dragListener={false} // Disable dragging on the entire div by default
+              dragControls={dragControls} // Assign controls
               dragConstraints={{ left: 0, right: window.innerWidth - 300, top: 0, bottom: window.innerHeight - 300 }} // Assuming 300px width/height for picker
               onDragEnd={(event, info) => {
                 setColorPickerPosition({ x: info.point.x, y: info.point.y });
@@ -368,7 +373,7 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.2, dragElastic: 0.2 }} // Add dragElastic here for "harder" feel
               className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -383,8 +388,14 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
                 e.stopPropagation();
               }}
             >
-              {/* Header with close button */}
-              <div className="flex items-center justify-between mb-4">
+              {/* Header with close button - This is the drag handle */}
+              <div
+                className="flex items-center justify-between mb-4 cursor-grab" // Add cursor-grab
+                onPointerDown={(e) => {
+                  e.stopPropagation(); // Prevent event from bubbling up to the main div's onMouseDown
+                  dragControls.start(e); // Start dragging from this element
+                }}
+              >
                 <div className="text-sm font-semibold text-foreground">Seletor de Cores</div>
                 <Button
                   variant="ghost"
