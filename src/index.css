@@ -103,20 +103,17 @@
 
   /* Enhanced link styling for contenteditable */
   [contenteditable] a {
-    color: hsl(var(--primary)); /* White text */
+    color: hsl(var(--primary));
     text-decoration: underline;
-    text-decoration-color: hsl(var(--primary)); /* White underline */
+    text-decoration-color: hsl(var(--primary) / 0.5);
+    text-underline-offset: 3px;
     cursor: pointer;
-    font-weight: 600; /* Bolder */
-    background-color: hsl(var(--primary) / 0.2); /* Subtle background */
-    padding: 0 2px;
-    border-radius: 3px;
+    font-weight: 700;
+    font-style: italic;
     transition: all 0.2s ease-out;
   }
 
   [contenteditable] a:hover {
-    opacity: 0.9;
-    background-color: hsl(var(--primary) / 0.3); /* Slightly darker background on hover */
     text-decoration-color: hsl(var(--primary));
   }
 
@@ -140,17 +137,15 @@
   .prose a {
     color: hsl(var(--primary));
     text-decoration: underline;
+    text-decoration-color: hsl(var(--primary) / 0.5);
+    text-underline-offset: 3px;
     cursor: pointer;
-    font-weight: 600;
-    background-color: hsl(var(--primary) / 0.1);
-    padding: 0 2px;
-    border-radius: 3px;
+    font-weight: 700;
+    font-style: italic;
     transition: all 0.2s ease-out;
   }
 
   .prose a:hover {
-    opacity: 0.9;
-    background-color: hsl(var(--primary) / 0.2);
     text-decoration-color: hsl(var(--primary));
   }
 
