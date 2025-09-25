@@ -108,7 +108,7 @@
     text-decoration-color: hsl(var(--primary)); /* White underline */
     cursor: pointer;
     font-weight: 600; /* Bolder */
-    background-color: hsl(var(--primary) / 0.2); /* Subtle background */
+    background-color: hsl(var(--primary) / 0.1); /* Subtle background */
     padding: 0 2px;
     border-radius: 3px;
     transition: all 0.2s ease-out;
@@ -116,7 +116,7 @@
 
   [contenteditable] a:hover {
     opacity: 0.9;
-    background-color: hsl(var(--primary) / 0.3); /* Slightly darker background on hover */
+    background-color: hsl(var(--primary) / 0.2); /* Slightly darker background on hover */
     text-decoration-color: hsl(var(--primary));
   }
 
