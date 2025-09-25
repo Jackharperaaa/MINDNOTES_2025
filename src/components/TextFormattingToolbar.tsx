@@ -129,6 +129,8 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
   const handleLinkClick = () => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
+      // Instead of an alert, we can briefly show a message or just do nothing.
+      // For now, we'll just prevent the dialog from opening if there's no selection.
       return;
     }
     setSelectedText(selection.toString());
@@ -142,32 +144,30 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
     }
   };
 
-  if (!visible && !isLinkDialogOpen) return null;
+  if (!visible) return null;
 
   return (
     <>
-      {visible && (
-        <motion.div
-          ref={toolbarRef}
-          initial={{ opacity: 0, scale: 0.9, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 10 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          className="fixed z-50 bg-background border border-border rounded-lg shadow-lg px-2 py-1.5"
-          style={{ left: position.x, top: position.y }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('bold')} title="Negrito"><Bold className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('italic')} title="Itálico"><Italic className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('underline')} title="Sublinhado"><Underline className="h-4 w-4" /></Button>
-            <div className="h-6 w-px bg-border mx-1" />
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowColorPalette(!showColorPalette)} title="Cor"><Palette className="h-4 w-4" /></Button>
-            <div className="h-6 w-px bg-border mx-1" />
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleLinkClick} title="Adicionar Link"><Link className="h-4 w-4" /></Button>
-          </div>
-        </motion.div>
-      )}
+      <motion.div
+        ref={toolbarRef}
+        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 10 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="fixed z-50 bg-background border border-border rounded-lg shadow-lg px-2 py-1.5"
+        style={{ left: position.x, top: position.y }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('bold')} title="Negrito"><Bold className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('italic')} title="Itálico"><Italic className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('underline')} title="Sublinhado"><Underline className="h-4 w-4" /></Button>
+          <div className="h-6 w-px bg-border mx-1" />
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowColorPalette(!showColorPalette)} title="Cor"><Palette className="h-4 w-4" /></Button>
+          <div className="h-6 w-px bg-border mx-1" />
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleLinkClick} title="Adicionar Link"><Link className="h-4 w-4" /></Button>
+        </div>
+      </motion.div>
 
       <AnimatePresence>
         {showColorPalette && (
