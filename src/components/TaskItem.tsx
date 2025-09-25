@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X } from 'lucide-react';
 import { Task } from '@/types';
-import { memo } from 'react';
 
 interface TaskItemProps {
   task: Task;
@@ -10,7 +9,7 @@ interface TaskItemProps {
   allTasksCompleted?: boolean;
 }
 
-export const TaskItem = memo(({ task, onToggle, onDelete, allTasksCompleted = false }: TaskItemProps) => {
+export const TaskItem = ({ task, onToggle, onDelete, allTasksCompleted = false }: TaskItemProps) => {
   return (
     <motion.div
       className="flex items-center gap-3 p-3 bg-secondary rounded-md border border-border group hover:bg-accent transition-colors"
@@ -72,4 +71,4 @@ export const TaskItem = memo(({ task, onToggle, onDelete, allTasksCompleted = fa
       </motion.button>
     </motion.div>
   );
-});
+};
