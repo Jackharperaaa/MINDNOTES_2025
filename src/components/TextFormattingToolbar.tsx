@@ -129,8 +129,7 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
   const handleLinkClick = () => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
-      // Instead of an alert, we can briefly show a message or just do nothing.
-      // For now, we'll just prevent the dialog from opening if there's no selection.
+      alert('Selecione o texto que deseja transformar em link');
       return;
     }
     setSelectedText(selection.toString());
