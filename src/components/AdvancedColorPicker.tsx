@@ -34,6 +34,9 @@ const COLOR_PALETTES = {
   ]
 };
 
+// Tipo para as chaves das paletas
+type PaletteType = keyof typeof COLOR_PALETTES;
+
 export const AdvancedColorPicker = ({ 
   isOpen, 
   onClose, 
@@ -44,7 +47,7 @@ export const AdvancedColorPicker = ({
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(100);
   const [brightness, setBrightness] = useState(100);
-  const [activePalette, setActivePalette] = keyofof COLOR_PALETTES>('material');
+  const [activePalette, setActivePalette] = useState<PaletteType>('material');
   const gradientRef = useRef<HTMLDivElement>(null);
 
   const { applyToSelection } = useSelectionManager();
@@ -95,7 +98,7 @@ export const AdvancedColorPicker = ({
       r: parseInt(result[1], 16),
       g: parseInt(result[2], 16),
       b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
+    } : { r: 0, g = 0, b = 0 };
   };
 
   // Converter RGB para HSB
