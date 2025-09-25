@@ -9,7 +9,7 @@ import {
   X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LinkDialog } from './LinkDialog'; // Import the new component
+import { LinkDialog } from './LinkDialog';
 
 interface TextFormattingToolbarProps {
   onFormat: (format: string, value?: string) => void;
@@ -102,7 +102,29 @@ export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y:
     }
   };
 
-  const handleColorSelect = (color: string) => applyFormat('foreColor', color);
+  const handleColorSelect = (color: string) => {
+    if (savedSelectionRange) {
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelectionRange);
+        
+        // Create a span element with the selected color
+        const span = document.createElement('span');
+        span.style.color = color;
+        
+        // Apply the color to the selection
+        document.execCommand('insertHTML', false, span.outerHTML);
+        
+        // Restore the selection after applying the color
+        const newSelection = window.getSelection();
+        if (newSelection) {
+          newSelection.removeAllRanges();
+          newSelection.addRange(savedSelectionRange);
+        }
+      }
+    }
+  };
 
   const handleGradientClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
