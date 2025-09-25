@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppState, TaskList, Task, UserProgress, FreeFormNote, EditorBlock } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -34,11 +34,11 @@ export const MindNotesApp = () => {
   
   const [showLevelUp, setShowLevelUp] = useState(false);
 
-  const handleTabChange = (tab: AppState['activeTab']) => {
+  const handleTabChange = useCallback((tab: AppState['activeTab']) => {
     setAppState(prev => ({ ...prev, activeTab: tab }));
-  };
+  }, [setAppState]);
 
-  const createTaskList = (title: string, taskTexts: string[], videoUrl?: string) => {
+  const createTaskList = useCallback((title: string, taskTexts: string[], videoUrl?: string) => {
     const tasks: Task[] = taskTexts.map(text => ({
       id: `task-${Date.now()}-${Math.random()}`,
       text,
@@ -59,9 +59,9 @@ export const MindNotesApp = () => {
       freeFormNotes: prev.freeFormNotes || [], // Ensure it exists
       taskLists: [newTaskList, ...prev.taskLists],
     }));
-  };
+  }, [setAppState]);
 
-  const toggleTask = (listId: string, taskId: string) => {
+  const toggleTask = useCallback((listId: string, taskId: string) => {
     setAppState(prev => ({
       ...prev,
       taskLists: prev.taskLists.map(list =>
@@ -79,9 +79,9 @@ export const MindNotesApp = () => {
           : list
       ),
     }));
-  };
+  }, [setAppState]);
 
-  const deleteTask = (listId: string, taskId: string) => {
+  const deleteTask = useCallback((listId: string, taskId: string) => {
     setAppState(prev => ({
       ...prev,
       taskLists: prev.taskLists.map(list =>
@@ -93,16 +93,16 @@ export const MindNotesApp = () => {
           : list
       ),
     }));
-  };
+  }, [setAppState]);
 
-  const deleteTaskList = (listId: string) => {
+  const deleteTaskList = useCallback((listId: string) => {
     setAppState(prev => ({
       ...prev,
       taskLists: prev.taskLists.filter(list => list.id !== listId),
     }));
-  };
+  }, [setAppState]);
 
-  const completeTaskList = (listId: string, completionTimeMinutes: number) => {
+  const completeTaskList = useCallback((listId: string, completionTimeMinutes: number) => {
     const taskList = appState.taskLists.find(list => list.id === listId);
     if (!taskList || taskList.completedAt) return;
 
@@ -128,10 +128,10 @@ export const MindNotesApp = () => {
       setShowLevelUp(true);
       setTimeout(() => setShowLevelUp(false), 3000);
     }
-  };
+  }, [appState.taskLists, appState.userProgress, setAppState]);
 
   // Free form note functions
-  const createFreeFormNote = (title: string, content: string, blocks?: EditorBlock[]) => {
+  const createFreeFormNote = useCallback((title: string, content: string, blocks?: EditorBlock[]) => {
     const newNote: FreeFormNote = {
       id: `note-${Date.now()}`,
       title,
@@ -145,9 +145,9 @@ export const MindNotesApp = () => {
       ...prev,
       freeFormNotes: [newNote, ...(prev.freeFormNotes || [])],
     }));
-  };
+  }, [setAppState]);
 
-  const updateFreeFormNote = (id: string, title: string, content: string, blocks?: EditorBlock[]) => {
+  const updateFreeFormNote = useCallback((id: string, title: string, content: string, blocks?: EditorBlock[]) => {
     setAppState(prev => ({
       ...prev,
       freeFormNotes: (prev.freeFormNotes || []).map(note =>
@@ -156,16 +156,16 @@ export const MindNotesApp = () => {
           : note
       ),
     }));
-  };
+  }, [setAppState]);
 
-  const deleteFreeFormNote = (id: string) => {
+  const deleteFreeFormNote = useCallback((id: string) => {
     setAppState(prev => ({
       ...prev,
       freeFormNotes: (prev.freeFormNotes || []).filter(note => note.id !== id),
     }));
-  };
+  }, [setAppState]);
 
-  const createTaskListFromAI = (title: string, tasks: string[], videoUrl?: string) => {
+  const createTaskListFromAI = useCallback((title: string, tasks: string[], videoUrl?: string) => {
     const newTasks: Task[] = tasks.map(text => ({
       id: `task-${Date.now()}-${Math.random()}`,
       text,
@@ -188,7 +188,7 @@ export const MindNotesApp = () => {
       taskLists: [newTaskList, ...prev.taskLists],
       activeTab: 'notes',
     }));
-  };
+  }, [setAppState]);
 
   return (
     <div className="min-h-screen bg-background flex">
