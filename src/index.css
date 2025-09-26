@@ -153,10 +153,4 @@
     background-color: hsl(var(--primary) / 0.2);
     text-decoration-color: hsl(var(--primary));
   }
-
-  /* Global selection style for better visibility on dark theme */
-  ::selection {
-    background-color: hsl(var(--primary) / 0.2); /* Semi-transparent white */
-    color: inherit; /* Keep the text color as it is */
-  }
 }
