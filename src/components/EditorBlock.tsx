@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { EditorBlock as BlockType } from '@/types';
 import { cn } from '@/lib/utils';
 import { TextFormattingToolbar } from './TextFormattingToolbar';
+import { ContentEditableDiv } from './ContentEditableDiv'; // Import the new component
 
 interface EditorBlockProps {
   block: BlockType;
@@ -32,6 +33,7 @@ export const EditorBlock = ({
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
+  const [lastSelectionRange, setLastSelectionRange] = useState<Range | null>(null); // State to store the last active selection range
   
   const contentEditableRef = useRef<HTMLDivElement | HTMLTextAreaElement>(null);
   const blockContainerRef = useRef<HTMLDivElement>(null); // Ref for the entire EditorBlock
@@ -87,10 +89,13 @@ export const EditorBlock = ({
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
       setShowToolbar(false);
+      setLastSelectionRange(null); // Clear saved selection
       return;
     }
 
     const range = selection.getRangeAt(0);
+    setLastSelectionRange(range); // Save the current selection range
+
     const rect = range.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     
@@ -115,6 +120,7 @@ export const EditorBlock = ({
         !toolbarRef.current.contains(event.target as Node)
       ) {
         setShowToolbar(false);
+        setLastSelectionRange(null); // Clear selection when toolbar is hidden
       }
     };
 
@@ -124,23 +130,37 @@ export const EditorBlock = ({
     };
   }, []);
 
+  const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a');
+    if (link && link.href) {
+      e.preventDefault(); // Prevent contenteditable from interfering
+      e.stopPropagation(); // Stop propagation to prevent other handlers
+      window.open(link.href, '_blank'); // Open link in new tab
+    }
+  };
+
   const commonProps = {
     onMouseUp: calculateToolbarPosition,
     onKeyUp: calculateToolbarPosition,
     onFocus: calculateToolbarPosition, // Show toolbar on focus if there's a selection
     onBlur: () => {
-      // Do not hide toolbar immediately on blur.
-      // The global click listener will handle hiding if focus moves completely outside.
-      // This timeout is a fallback to hide if the global listener somehow misses it,
-      // or if the user just clicks away without interacting with toolbar.
+      // When contentEditable blurs, we need to save the selection
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        setLastSelectionRange(selection.getRangeAt(0));
+      } else {
+        setLastSelectionRange(null);
+      }
+      // Delay hiding the toolbar to allow interaction with it
       setTimeout(() => {
-        const selection = window.getSelection();
-        if (!selection || selection.isCollapsed) {
-          // If no selection, hide toolbar
+        const currentSelection = window.getSelection();
+        if (!currentSelection || currentSelection.isCollapsed) {
           setShowToolbar(false);
         }
-      }, 100); // Short timeout to allow other elements to gain focus
-    }
+      }, 100);
+    },
+    onClick: handleContentClick, // Add click handler for links
   };
     
   const getStyleClasses = () => {
@@ -177,16 +197,10 @@ export const EditorBlock = ({
       switch (block.type) {
         case 'heading1':
           return (
-            <div
+            <ContentEditableDiv
               ref={contentEditableRef as RefObject<HTMLDivElement>}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const target = e.target as HTMLDivElement;
-                updateContent(target.innerHTML);
-              }}
+              initialHTML={block.content || ''}
+              onBlur={(html) => updateContent(html)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -199,7 +213,6 @@ export const EditorBlock = ({
                 }
               }}
               className={cn(baseClasses, "text-3xl font-bold text-foreground min-h-[48px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
-              dangerouslySetInnerHTML={{ __html: block.content || '' }}
               data-placeholder="Heading 1"
               {...commonProps}
             />
@@ -207,16 +220,10 @@ export const EditorBlock = ({
         
         case 'heading2':
           return (
-            <div
+            <ContentEditableDiv
               ref={contentEditableRef as RefObject<HTMLDivElement>}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const target = e.target as HTMLDivElement;
-                updateContent(target.innerHTML);
-              }}
+              initialHTML={block.content || ''}
+              onBlur={(html) => updateContent(html)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -229,7 +236,6 @@ export const EditorBlock = ({
                 }
               }}
               className={cn(baseClasses, "text-2xl font-semibold text-foreground min-h-[40px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
-              dangerouslySetInnerHTML={{ __html: block.content || '' }}
               data-placeholder="Heading 2"
               {...commonProps}
             />
@@ -237,16 +243,10 @@ export const EditorBlock = ({
         
         case 'heading3':
           return (
-            <div
+            <ContentEditableDiv
               ref={contentEditableRef as RefObject<HTMLDivElement>}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const target = e.target as HTMLDivElement;
-                updateContent(target.innerHTML);
-              }}
+              initialHTML={block.content || ''}
+              onBlur={(html) => updateContent(html)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -259,7 +259,6 @@ export const EditorBlock = ({
                 }
               }}
               className={cn(baseClasses, "text-xl font-medium text-foreground min-h-[32px] outline-none border border-transparent focus:border-border rounded p-2", getStyleClasses())}
-              dangerouslySetInnerHTML={{ __html: block.content || '' }}
               data-placeholder="Heading 3"
               {...commonProps}
             />
@@ -722,53 +721,34 @@ export const EditorBlock = ({
       
         default:
           return (
-            <div className="space-y-2">
-              <div
-                ref={contentEditableRef as RefObject<HTMLDivElement>}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={(e) => {
+            <ContentEditableDiv
+              ref={contentEditableRef as RefObject<HTMLDivElement>}
+              initialHTML={block.content || ''}
+              onBlur={(html) => updateContent(html)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   e.stopPropagation();
-                  const target = e.target as HTMLDivElement;
-                  updateContent(target.innerHTML);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onAddBlock(index + 1, 'text');
-                  } else if (e.key === 'Backspace' && (e.target as HTMLDivElement).innerHTML === '') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDelete(index);
-                  }
-                }}
-                className={cn(
-                  baseClasses, 
-                  "text-foreground min-h-[24px] outline-none border border-transparent focus:border-border rounded p-2",
-                  getStyleClasses()
-                )}
-                dangerouslySetInnerHTML={{ __html: block.content || '' }}
-                data-placeholder="Type something..."
-                style={{
-                  minHeight: '24px',
-                  wordWrap: 'break-word',
-                  whiteSpace: 'pre-wrap'
-                }}
-                {...commonProps}
-              />
-              {/* Preview Area */}
-              {block.content && (
-                <div className="p-3 bg-muted/30 rounded-md border border-muted">
-                  <div className="text-xs text-muted-foreground mb-2">Preview:</div>
-                  <div 
-                    className="text-sm prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: block.content }}
-                  />
-                </div>
+                  onAddBlock(index + 1, 'text');
+                } else if (e.key === 'Backspace' && (e.target as HTMLDivElement).innerHTML === '') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete(index);
+                }
+              }}
+              className={cn(
+                baseClasses, 
+                "text-foreground min-h-[24px] outline-none border border-transparent focus:border-border rounded p-2",
+                getStyleClasses()
               )}
-            </div>
+              data-placeholder="Type something..."
+              style={{
+                minHeight: '24px',
+                wordWrap: 'break-word',
+                whiteSpace: 'pre-wrap'
+              }}
+              {...commonProps}
+            />
           );
       }
     };
@@ -829,6 +809,8 @@ export const EditorBlock = ({
           onFormat={() => {}} // onFormat is not directly used by toolbar anymore
           visible={showToolbar}
           position={toolbarPosition}
+          savedSelectionRange={lastSelectionRange} // Pass the saved range
+          onSelectionChange={setLastSelectionRange} // Pass the setter for the saved range
         />
       )}
 

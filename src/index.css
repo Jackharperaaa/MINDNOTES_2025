@@ -101,14 +101,20 @@
     text-decoration: underline;
   }
 
+  /* Enhanced link styling for contenteditable */
   [contenteditable] a {
     color: hsl(var(--primary));
     text-decoration: underline;
+    text-decoration-color: hsl(var(--primary) / 0.5);
+    text-underline-offset: 3px;
     cursor: pointer;
+    font-weight: 700;
+    font-style: italic;
+    transition: all 0.2s ease-out;
   }
 
   [contenteditable] a:hover {
-    opacity: 0.8;
+    text-decoration-color: hsl(var(--primary));
   }
 
   /* Prose styles for preview */
@@ -131,10 +137,21 @@
   .prose a {
     color: hsl(var(--primary));
     text-decoration: underline;
+    text-decoration-color: hsl(var(--primary) / 0.5);
+    text-underline-offset: 3px;
     cursor: pointer;
+    font-weight: 700;
+    font-style: italic;
+    transition: all 0.2s ease-out;
   }
 
   .prose a:hover {
-    opacity: 0.8;
+    text-decoration-color: hsl(var(--primary));
+  }
+
+  /* Global selection style for better visibility on dark theme */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.2); /* Semi-transparent white */
+    color: inherit; /* Keep the text color as it is */
   }
 }
