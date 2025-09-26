@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TaskList, Task } from '@/types';
 import { TaskItem } from './TaskItem';
 import { Trash2, Circle, Play, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TaskListCardProps {
@@ -15,7 +15,7 @@ interface TaskListCardProps {
   onToggleMinimize?: () => void;
 }
 
-export const TaskListCard = memo(({ 
+export const TaskListCard = ({ 
   taskList, 
   onToggleTask, 
   onDeleteTask, 
@@ -150,4 +150,4 @@ export const TaskListCard = memo(({
       </AnimatePresence>
     </motion.div>
   );
-});
+};
