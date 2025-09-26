@@ -8,6 +8,7 @@ import { EditorBlock as BlockType } from '@/types';
 import { cn } from '@/lib/utils';
 import { TextFormattingToolbar } from './TextFormattingToolbar';
 import { ContentEditableDiv } from './ContentEditableDiv'; // Import the new component
+import { LinkDialog } from './LinkDialog'; // Import the new LinkDialog
 
 interface EditorBlockProps {
   block: BlockType;
@@ -33,11 +34,12 @@ export const EditorBlock = ({
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
-  const [lastSelectionRange, setLastSelectionRange] = useState<Range | null>(null); // State to store the last active selection range
+  const [lastSelectionRange, setLastSelectionRange] = useState<Range | null>(null);
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   
   const contentEditableRef = useRef<HTMLDivElement | HTMLTextAreaElement>(null);
-  const blockContainerRef = useRef<HTMLDivElement>(null); // Ref for the entire EditorBlock
-  const toolbarRef = useRef<HTMLDivElement>(null); // Ref for the TextFormattingToolbar
+  const blockContainerRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
 
   const updateContent = (content: string) => {
     onUpdate(index, { ...block, content });
@@ -89,28 +91,26 @@ export const EditorBlock = ({
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
       setShowToolbar(false);
-      setLastSelectionRange(null); // Clear saved selection
+      setLastSelectionRange(null);
       return;
     }
 
     const range = selection.getRangeAt(0);
-    setLastSelectionRange(range); // Save the current selection range
+    setLastSelectionRange(range.cloneRange());
 
     const rect = range.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     
-    // Position toolbar above the selection
-    const x = rect.left + window.scrollX + rect.width / 2 - 150; // Center horizontally (toolbar width ~300px / 2)
-    const y = rect.top + scrollTop - 50; // 50px above the selection
+    const x = rect.left + window.scrollX + rect.width / 2 - 150;
+    const y = rect.top + scrollTop - 50;
     
     setToolbarPosition({ 
-      x: Math.max(10, x), // Ensure it doesn't go off the left edge
-      y: Math.max(10, y)  // Ensure it doesn't go off the top edge
+      x: Math.max(10, x),
+      y: Math.max(10, y)
     });
     setShowToolbar(true);
   };
 
-  // Global click listener to hide toolbar if clicked outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -120,7 +120,6 @@ export const EditorBlock = ({
         !toolbarRef.current.contains(event.target as Node)
       ) {
         setShowToolbar(false);
-        setLastSelectionRange(null); // Clear selection when toolbar is hidden
       }
     };
 
@@ -134,33 +133,60 @@ export const EditorBlock = ({
     const target = e.target as HTMLElement;
     const link = target.closest('a');
     if (link && link.href) {
-      e.preventDefault(); // Prevent contenteditable from interfering
-      e.stopPropagation(); // Stop propagation to prevent other handlers
-      window.open(link.href, '_blank'); // Open link in new tab
+      e.preventDefault();
+      e.stopPropagation();
+      window.open(link.href, '_blank');
     }
+  };
+
+  const applyFormat = (command: string, value?: string) => {
+    if (lastSelectionRange) {
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(lastSelectionRange);
+        document.execCommand(command, false, value);
+        
+        // Re-focus the content editable element to keep the cursor active
+        if (contentEditableRef.current) {
+          (contentEditableRef.current as HTMLElement).focus();
+        }
+        
+        // Update the selection range after applying format
+        if (selection.rangeCount > 0) {
+          setLastSelectionRange(selection.getRangeAt(0).cloneRange());
+        }
+      }
+    }
+  };
+
+  const handleLinkSubmit = (url: string, text?: string) => {
+    applyFormat('createLink', url);
+    // The link text is handled by the browser's execCommand with the selection
+    setIsLinkDialogOpen(false);
   };
 
   const commonProps = {
     onMouseUp: calculateToolbarPosition,
     onKeyUp: calculateToolbarPosition,
-    onFocus: calculateToolbarPosition, // Show toolbar on focus if there's a selection
-    onBlur: () => {
-      // When contentEditable blurs, we need to save the selection
+    onFocus: () => {
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed) {
-        setLastSelectionRange(selection.getRangeAt(0));
-      } else {
-        setLastSelectionRange(null);
+        calculateToolbarPosition();
       }
-      // Delay hiding the toolbar to allow interaction with it
-      setTimeout(() => {
-        const currentSelection = window.getSelection();
-        if (!currentSelection || currentSelection.isCollapsed) {
-          setShowToolbar(false);
-        }
-      }, 100);
     },
-    onClick: handleContentClick, // Add click handler for links
+    onBlur: () => {
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        setLastSelectionRange(selection.getRangeAt(0).cloneRange());
+      }
+      setTimeout(() => {
+        if (!document.activeElement || !blockContainerRef.current?.contains(document.activeElement)) {
+           // Don't hide if focus is inside toolbar or dialogs
+        }
+      }, 200);
+    },
+    onClick: handleContentClick,
   };
     
   const getStyleClasses = () => {
@@ -273,7 +299,6 @@ export const EditorBlock = ({
               onKeyDown={handleKeyDown}
               className={cn(baseClasses, "font-mono text-sm bg-secondary p-3 rounded border-border text-foreground min-h-[60px]", getStyleClasses())}
               placeholder="Enter code..."
-              {...commonProps}
             />
           );
         
@@ -287,7 +312,6 @@ export const EditorBlock = ({
                 onKeyDown={handleKeyDown}
                 className={cn(baseClasses, "italic text-foreground/80 min-h-[40px]", getStyleClasses())}
                 placeholder="Quote..."
-                {...commonProps}
               />
             </div>
           );
@@ -309,7 +333,6 @@ export const EditorBlock = ({
                 onKeyDown={handleKeyDown}
                 className={cn(baseClasses, "text-foreground min-h-[40px]")}
                 placeholder="Highlight note..."
-                {...commonProps}
               />
             </div>
           );
@@ -325,7 +348,6 @@ export const EditorBlock = ({
                 onKeyDown={handleKeyDown}
                 className={cn(baseClasses, "text-foreground min-h-[24px] flex-1")}
                 placeholder="List item"
-                {...commonProps}
               />
             </div>
           );
@@ -341,7 +363,6 @@ export const EditorBlock = ({
                 onKeyDown={handleKeyDown}
                 className={cn(baseClasses, "text-foreground min-h-[24px] flex-1")}
                 placeholder="List item"
-                {...commonProps}
               />
             </div>
           );
@@ -365,7 +386,6 @@ export const EditorBlock = ({
                   block.checked && "line-through opacity-60"
                 )}
                 placeholder="Task"
-                {...commonProps}
               />
             </div>
           );
@@ -386,7 +406,6 @@ export const EditorBlock = ({
                   onKeyDown={handleKeyDown}
                   className={cn(baseClasses, "text-foreground flex-1")}
                   placeholder="Toggle list"
-                  {...commonProps}
                 />
               </CollapsibleTrigger>
               <CollapsibleContent className="ml-6 mt-2">
@@ -424,7 +443,6 @@ export const EditorBlock = ({
                     onChange={(e) => updateMetadata({ url: e.target.value })}
                     placeholder="Enter URL..."
                     className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground"
-                    {...commonProps} // Apply common props to allow toolbar interaction
                   />
                 )}
               </div>
@@ -446,7 +464,6 @@ export const EditorBlock = ({
                 onChange={(e) => updateContent(e.target.value)}
                 placeholder="Link text..."
                 className="w-full bg-transparent text-foreground placeholder:text-muted-foreground"
-                {...commonProps} // Apply common props to allow toolbar interaction
               />
             </div>
           );
@@ -470,7 +487,6 @@ export const EditorBlock = ({
                       }
                     }
                   }}
-                  {...commonProps} // Apply common props to allow toolbar interaction
                 />
                 <label className="bg-black text-white px-3 py-1 rounded text-xs cursor-pointer hover:bg-gray-800 transition-colors">
                   UPLOAD
@@ -538,7 +554,6 @@ export const EditorBlock = ({
                 onChange={(e) => updateContent(e.target.value)}
                 placeholder="Image caption..."
                 className="w-full bg-transparent text-foreground placeholder:text-muted-foreground text-sm"
-                {...commonProps} // Apply common props to allow toolbar interaction
               />
             </div>
           );
@@ -570,7 +585,6 @@ export const EditorBlock = ({
                     onChange={(e) => updateMetadata({ url: e.target.value })}
                     placeholder="Video URL..."
                     className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground"
-                    {...commonProps} // Apply common props to allow toolbar interaction
                   />
                 )}
                 <label className="bg-black text-white px-3 py-1 rounded text-xs cursor-pointer hover:bg-gray-800 transition-colors">
@@ -622,7 +636,6 @@ export const EditorBlock = ({
                 onChange={(e) => updateContent(e.target.value)}
                 placeholder="Video caption..."
                 className="w-full bg-transparent text-foreground placeholder:text-muted-foreground text-sm"
-                {...commonProps} // Apply common props to allow toolbar interaction
               />
             </div>
           );
@@ -646,7 +659,6 @@ export const EditorBlock = ({
                       }
                     }
                   }}
-                  {...commonProps} // Apply common props to allow toolbar interaction
                 />
                 <label className="bg-black text-white px-3 py-1 rounded text-xs cursor-pointer hover:bg-gray-800 transition-colors">
                   UPLOAD
@@ -714,7 +726,6 @@ export const EditorBlock = ({
               onChange={(e) => updateContent(e.target.value)}
               placeholder="GIF caption..."
               className="w-full bg-transparent text-foreground placeholder:text-muted-foreground text-sm"
-              {...commonProps} // Apply common props to allow toolbar interaction
             />
           </div>
         );
@@ -755,7 +766,7 @@ export const EditorBlock = ({
 
   return (
     <motion.div
-      ref={blockContainerRef} // Assign ref to the outermost div of EditorBlock
+      ref={blockContainerRef}
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -805,14 +816,21 @@ export const EditorBlock = ({
       {/* Rich text formatting toolbar */}
       {showToolbar && (
         <TextFormattingToolbar 
-          toolbarRef={toolbarRef} // Pass the ref here
-          onFormat={() => {}} // onFormat is not directly used by toolbar anymore
+          toolbarRef={toolbarRef}
+          onFormat={applyFormat}
+          onLinkClick={() => setIsLinkDialogOpen(true)}
           visible={showToolbar}
           position={toolbarPosition}
-          savedSelectionRange={lastSelectionRange} // Pass the saved range
-          onSelectionChange={setLastSelectionRange} // Pass the setter for the saved range
         />
       )}
+
+      {/* Link Dialog */}
+      <LinkDialog
+        isOpen={isLinkDialogOpen}
+        onClose={() => setIsLinkDialogOpen(false)}
+        onSubmit={handleLinkSubmit}
+        selectedText={lastSelectionRange?.toString()}
+      />
 
       {/* Image expansion modal */}
       <AnimatePresence>

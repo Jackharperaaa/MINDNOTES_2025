@@ -103,21 +103,19 @@
 
   /* Enhanced link styling for contenteditable */
   [contenteditable] a {
-    color: hsl(var(--primary)); /* White text */
+    color: hsl(210 100% 75%); /* Light blue for links */
     text-decoration: underline;
-    text-decoration-color: hsl(var(--primary)); /* White underline */
+    text-decoration-color: hsl(210 100% 75% / 0.5);
     cursor: pointer;
-    font-weight: 600; /* Bolder */
-    background-color: hsl(var(--primary) / 0.1); /* Subtle background */
+    background-color: hsl(210 100% 50% / 0.1);
     padding: 0 2px;
     border-radius: 3px;
     transition: all 0.2s ease-out;
   }
 
   [contenteditable] a:hover {
-    opacity: 0.9;
-    background-color: hsl(var(--primary) / 0.2); /* Slightly darker background on hover */
-    text-decoration-color: hsl(var(--primary));
+    background-color: hsl(210 100% 50% / 0.2);
+    text-decoration-color: hsl(210 100% 75%);
   }
 
   /* Prose styles for preview */
@@ -138,19 +136,16 @@
   }
 
   .prose a {
-    color: hsl(var(--primary));
+    color: hsl(210 100% 75%);
     text-decoration: underline;
     cursor: pointer;
-    font-weight: 600;
-    background-color: hsl(var(--primary) / 0.1);
+    background-color: hsl(210 100% 50% / 0.1);
     padding: 0 2px;
     border-radius: 3px;
     transition: all 0.2s ease-out;
   }
 
   .prose a:hover {
-    opacity: 0.9;
-    background-color: hsl(var(--primary) / 0.2);
-    text-decoration-color: hsl(var(--primary));
+    background-color: hsl(210 100% 50% / 0.2);
   }
 }
