@@ -1,210 +1,609 @@
 import React, { useState, useEffect, useRef, RefObject } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bold, 
   Italic, 
   Underline, 
+  Strikethrough, 
+  Code,
+  Superscript,
+  Subscript,
   Palette,
+  Highlighter,
   Link,
-  X
+  MessageSquare,
+  X,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LinkDialog } from './LinkDialog'; // Import the new component
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface TextFormattingToolbarProps {
   onFormat: (format: string, value?: string) => void;
   visible: boolean;
   position?: { x: number; y: number };
-  toolbarRef: RefObject<HTMLDivElement>;
-  savedSelectionRange: Range | null;
-  onSelectionChange: (range: Range | null) => void;
+  toolbarRef: RefObject<HTMLDivElement>; // Add toolbarRef prop
 }
 
-// HSB to RGB conversion
+// Convert HSB to RGB
 const hsbToRgb = (h: number, s: number, b: number) => {
-  s /= 100; b /= 100;
-  const k = (n: number) => (n + h / 60) % 6;
-  const f = (n: number) => b * (1 - s * Math.max(0, Math.min(k(n), 4 - k(n), 1)));
+  s = s / 100;
+  b = b / 100;
+  const c = b * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = b - c;
+  let r = 0, g = 0, blue = 0;
+
+  if (0 <= h && h < 60) {
+    r = c; g = x; blue = 0;
+  } else if (60 <= h && h < 120) {
+    r = x; g = c; blue = 0;
+  } else if (120 <= h && h < 180) {
+    r = 0; g = c; blue = x;
+  } else if (180 <= h && h < 240) {
+    r = 0; g = x; blue = c;
+  } else if (240 <= h && h < 300) {
+    r = x; g = 0; blue = c;
+  } else if (300 <= h && h < 360) {
+    r = c; g = 0; blue = x;
+  }
+
   return {
-    r: Math.round(255 * f(5)),
-    g: Math.round(255 * f(3)),
-    b: Math.round(255 * f(1))
+    r: Math.round((r + m) * 255),
+    g: Math.round((g + m) * 255),
+    b: Math.round((blue + m) * 255)
   };
 };
 
-// RGB to Hex conversion
-const rgbToHex = (r: number, g: number, b: number) => `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
+// Convert RGB to Hex
+const rgbToHex = (r: number, g: number, b: number) => {
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
 
-export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y: 0 }, toolbarRef, savedSelectionRange, onSelectionChange }: TextFormattingToolbarProps) => {
+export const TextFormattingToolbar = ({ onFormat, visible, position = { x: 0, y: 0 }, toolbarRef }: TextFormattingToolbarProps) => {
   const [showColorPalette, setShowColorPalette] = useState(false);
-  const [isLinkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkText, setLinkText] = useState('');
   const [selectedText, setSelectedText] = useState('');
   
   const [currentHue, setCurrentHue] = useState(0);
   const [currentSaturation, setSaturation] = useState(100);
   const [currentBrightness, setBrightness] = useState(100);
   const [selectedColor, setSelectedColor] = useState('#FF0000');
-  const [colorPickerPosition, setColorPickerPosition] = useState({ x: 0, y: 0 });
-  const dragControls = useDragControls();
 
   useEffect(() => {
     if (visible) {
       const selection = window.getSelection();
       if (selection && !selection.isCollapsed) {
         setSelectedText(selection.toString());
+        setLinkText(selection.toString());
       }
     }
   }, [visible]);
 
-  useEffect(() => {
-    if (showColorPalette && savedSelectionRange) {
-      const selectionRect = savedSelectionRange.getBoundingClientRect();
-      const pickerWidth = 300;
-      const pickerHeight = 300;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      let initialX = selectionRect.left + window.scrollX + (selectionRect.width / 2) - (pickerWidth / 2);
-      let initialY = selectionRect.top + window.scrollY - pickerHeight - 10;
-
-      if (initialY < 10) initialY = selectionRect.bottom + window.scrollY + 10;
-      if (initialX < 10) initialX = 10;
-      if (initialX + pickerWidth > viewportWidth - 10) initialX = viewportWidth - pickerWidth - 10;
-      if (initialY + pickerHeight > viewportHeight - 10) initialY = viewportHeight - pickerHeight - 10;
-
-      setColorPickerPosition({ x: initialX, y: initialY });
-    }
-  }, [showColorPalette, savedSelectionRange]);
-
   const applyFormat = (format: string, value?: string) => {
-    if (savedSelectionRange) {
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(savedSelectionRange);
+    // Ensure the contentEditable element is focused before applying format
+    // This is crucial if the toolbar button click caused the contentEditable to blur
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      // Restore selection if it was lost due to blur
+      if (range.startContainer.nodeType === Node.ELEMENT_NODE && (range.startContainer as HTMLElement).contentEditable === 'true') {
+        // The selection is still within a contentEditable, good.
+      } else {
+        // Try to re-focus the original contentEditable if possible
+        // For now, rely on execCommand working on the last active contentEditable.
       }
-    } else {
-      return;
     }
 
-    document.execCommand(format === 'link' ? 'createLink' : format, false, value);
-
-    const newSelection = window.getSelection();
-    if (newSelection && !newSelection.isCollapsed && newSelection.rangeCount > 0) {
-      const newRange = newSelection.getRangeAt(0);
-      onSelectionChange(newRange);
-      const parentContentEditable = newRange.commonAncestorContainer.parentElement?.closest('[contenteditable="true"]');
-      if (parentContentEditable instanceof HTMLElement) {
-        parentContentEditable.focus();
-      }
-    } else {
-      onSelectionChange(null);
+    switch (format) {
+      case 'bold':
+        document.execCommand('bold', false);
+        break;
+      case 'italic':
+        document.execCommand('italic', false);
+        break;
+      case 'underline':
+        document.execCommand('underline', false);
+        break;
+      case 'strikethrough':
+        document.execCommand('strikeThrough', false);
+        break;
+      case 'superscript':
+        document.execCommand('superscript', false);
+        break;
+      case 'subscript':
+        document.execCommand('subscript', false);
+        break;
+      case 'color':
+        if (value) {
+          document.execCommand('foreColor', false, value);
+        }
+        break;
+      case 'highlight': // Background color for highlight
+        if (value) {
+          document.execCommand('backColor', false, value);
+        }
+        break;
+      case 'link':
+        if (value) {
+          document.execCommand('createLink', false, value);
+        }
+        break;
+      default:
+        // Fallback for other formats if needed, though execCommand covers most basic ones
+        onFormat(format, value);
     }
   };
 
-  const handleColorSelect = (color: string) => applyFormat('foreColor', color);
+  const handleColorSelect = (color: string) => {
+    applyFormat('color', color);
+  };
+
+  const handleHighlightSelect = (color: string) => {
+    applyFormat('highlight', color);
+  };
 
   const handleGradientClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    const saturation = ((e.clientX - rect.left) / rect.width) * 100;
-    const brightness = ((rect.height - (e.clientY - rect.top)) / rect.height) * 100;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const saturation = (x / rect.width) * 100;
+    const brightness = ((rect.height - y) / rect.height) * 100;
+    
     setSaturation(saturation);
     setBrightness(brightness);
+    
     const rgb = hsbToRgb(currentHue, saturation, brightness);
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
     setSelectedColor(hex);
-    handleColorSelect(hex);
+    handleColorSelect(hex); // Apply text color
   };
 
   const handleHueClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    const hue = ((e.clientY - rect.top) / rect.height) * 360;
+    const y = e.clientY - rect.top;
+    const hue = (y / rect.height) * 360;
+    
     setCurrentHue(hue);
+    
     const rgb = hsbToRgb(hue, currentSaturation, currentBrightness);
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
     setSelectedColor(hex);
-    handleColorSelect(hex);
+    handleColorSelect(hex); // Apply text color
   };
 
   const handleLinkClick = () => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
-      // Instead of an alert, we can briefly show a message or just do nothing.
-      // For now, we'll just prevent the dialog from opening if there's no selection.
+      alert('Selecione o texto que deseja transformar em link');
       return;
     }
+    
     setSelectedText(selection.toString());
-    setLinkDialogOpen(true);
+    setLinkText(selection.toString());
+    setShowLinkDialog(true);
   };
 
-  const handleLinkSubmit = (url: string) => {
-    if (url.trim()) {
-      applyFormat('link', url);
-      setLinkDialogOpen(false);
+  const handleLinkSubmit = () => {
+    if (linkUrl.trim()) {
+      let validUrl = linkUrl.trim();
+      if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
+        validUrl = 'https://' + validUrl;
+      }
+      
+      try {
+        new URL(validUrl);
+        applyFormat('link', validUrl);
+        setShowLinkDialog(false);
+        setLinkUrl('');
+        setLinkText('');
+      } catch (error) {
+        alert('Por favor, insira uma URL válida');
+      }
     }
+  };
+
+  const handleLinkCancel = () => {
+    setShowLinkDialog(false);
+    setLinkUrl('');
+    setLinkText('');
   };
 
   if (!visible) return null;
 
   return (
-    <>
+    <AnimatePresence>
       <motion.div
-        ref={toolbarRef}
+        ref={toolbarRef} // Assign the passed ref here
         initial={{ opacity: 0, scale: 0.9, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 10 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
         className="fixed z-50 bg-background border border-border rounded-lg shadow-lg px-2 py-1.5"
-        style={{ left: position.x, top: position.y }}
+        style={{
+          left: position.x,
+          top: position.y,
+        }}
+        // Crucial: Stop propagation for all mouse events on the toolbar itself
         onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('bold')} title="Negrito"><Bold className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('italic')} title="Itálico"><Italic className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => applyFormat('underline')} title="Sublinhado"><Underline className="h-4 w-4" /></Button>
-          <div className="h-6 w-px bg-border mx-1" />
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowColorPalette(!showColorPalette)} title="Cor"><Palette className="h-4 w-4" /></Button>
-          <div className="h-6 w-px bg-border mx-1" />
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleLinkClick} title="Adicionar Link"><Link className="h-4 w-4" /></Button>
-        </div>
-      </motion.div>
-
-      <AnimatePresence>
-        {showColorPalette && (
-          <motion.div
-            drag dragControls={dragControls} dragListener={false}
-            dragConstraints={{ left: 0, right: window.innerWidth - 300, top: 0, bottom: window.innerHeight - 300 }}
-            onDragEnd={(e, info) => setColorPickerPosition({ x: info.point.x, y: info.point.y })}
-            style={{ x: colorPickerPosition.x, y: colorPickerPosition.y }}
-            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.2, dragElastic: 0.2 }}
-            className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
-            onMouseDown={(e) => e.stopPropagation()}
+          {/* Formatação básica */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('bold')}
+            title="Negrito"
           >
-            <div className="flex items-center justify-between mb-4 cursor-grab" onPointerDown={(e) => dragControls.start(e)}>
-              <div className="text-sm font-semibold text-foreground">Seletor de Cores</div>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setShowColorPalette(false)}><X className="h-4 w-4" /></Button>
-            </div>
-            <div className="flex gap-3 mb-4">
-              <div className="relative w-48 h-32 cursor-crosshair rounded border border-border overflow-hidden" style={{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${currentHue}, 100%, 50%))` }} onMouseDown={handleGradientClick}>
-                <div className="absolute w-2 h-2 border border-white rounded-full transform -translate-x-1 -translate-y-1 pointer-events-none" style={{ left: `${currentSaturation}%`, top: `${100 - currentBrightness}%`, boxShadow: '0 0 0 1px rgba(0,0,0,0.5)' }} />
-              </div>
-              <div className="relative w-4 h-32 cursor-pointer rounded border border-border overflow-hidden" style={{ background: 'linear-gradient(to bottom, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)' }} onMouseDown={handleHueClick}>
-                <div className="absolute w-full h-1 border-t border-b border-white pointer-events-none" style={{ top: `${(currentHue / 360) * 100}%`, boxShadow: '0 0 0 1px rgba(0,0,0,0.5)' }} />
-              </div>
-            </div>
-            <div className="flex-1"><div className="text-xs text-muted-foreground mb-1">Nova cor:</div><div className="w-full h-8 rounded border border-border" style={{ backgroundColor: selectedColor }} /></div>
-            <div className="mt-3"><div className="text-xs text-muted-foreground mb-1">Código hex:</div><input type="text" value={selectedColor} onChange={(e) => { const v = e.target.value; if (v.match(/^#[0-9A-Fa-f]{0,6}$/)) { setSelectedColor(v); if (v.length === 7) handleColorSelect(v); } }} className="w-full px-2 py-1 text-sm border border-border rounded bg-background text-foreground" /></div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Bold className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('italic')}
+            title="Itálico"
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('underline')}
+            title="Sublinhado"
+          >
+            <Underline className="h-4 w-4" />
+          </Button>
 
-      <LinkDialog
-        isOpen={isLinkDialogOpen}
-        onClose={() => setLinkDialogOpen(false)}
-        onSubmit={handleLinkSubmit}
-        selectedText={selectedText}
-      />
-    </>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('strikethrough')}
+            title="Tachado"
+          >
+            <Strikethrough className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('superscript')}
+            title="Sobrescrito"
+          >
+            <Superscript className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => applyFormat('subscript')}
+            title="Subscrito"
+          >
+            <Subscript className="h-4 w-4" />
+          </Button>
+
+          <div className="h-6 w-px bg-border mx-1" />
+
+          {/* Botão de Cor do Texto */}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowColorPalette(!showColorPalette);
+              }}
+              title="Seletor de Cores Avançado"
+            >
+              <Palette className="h-4 w-4" />
+            </Button>
+
+            {/* Photoshop-Style Color Picker */}
+            <AnimatePresence>
+              {showColorPalette && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-10 left-0 z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onMouseUp={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  {/* Header with close button */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-sm font-semibold text-foreground">Seletor de Cores</div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowColorPalette(false);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Color picker area */}
+                  <div className="flex gap-3 mb-4">
+                    {/* Main gradient area */}
+                    <div
+                      className="relative w-48 h-32 cursor-crosshair rounded border border-border overflow-hidden"
+                      style={{
+                        background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${currentHue}, 100%, 50%))`
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleGradientClick(e);
+                      }}
+                    >
+                      {/* Crosshair indicator */}
+                      <div
+                        className="absolute w-2 h-2 border border-white rounded-full transform -translate-x-1 -translate-y-1 pointer-events-none"
+                        style={{
+                          left: `${currentSaturation}%`,
+                          top: `${100 - currentBrightness}%`,
+                          boxShadow: '0 0 0 1px rgba(0,0,0,0.5)'
+                        }}
+                      />
+                    </div>
+
+                    {/* Hue slider */}
+                    <div
+                      className="relative w-4 h-32 cursor-pointer rounded border border-border overflow-hidden"
+                      style={{
+                        background: 'linear-gradient(to bottom, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)'
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleHueClick(e);
+                      }}
+                    >
+                      {/* Hue indicator */}
+                      <div
+                        className="absolute w-full h-1 border-t border-b border-white pointer-events-none"
+                        style={{
+                          top: `${(currentHue / 360) * 100}%`,
+                          boxShadow: '0 0 0 1px rgba(0,0,0,0.5)'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Color preview */}
+                  <div className="flex gap-2 mb-3">
+                    <div className="flex-1">
+                      <div className="text-xs text-muted-foreground mb-1">Nova cor:</div>
+                      <div
+                        className="w-full h-8 rounded border border-border"
+                        style={{ backgroundColor: selectedColor }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Hex input */}
+                  <div className="mb-3">
+                    <div className="text-xs text-muted-foreground mb-1">Código hex:</div>
+                    <input
+                      type="text"
+                      value={selectedColor}
+                      onFocus={(e) => e.stopPropagation()}
+                      onBlur={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        const value = e.target.value;
+                        if (value.match(/^#[0-9A-Fa-f]{0,6}$/)) {
+                          setSelectedColor(value);
+                          if (value.length === 7) {
+                            handleColorSelect(value);
+                          }
+                        }
+                      }}
+                      className="w-full px-2 py-1 text-sm border border-border rounded bg-background text-foreground"
+                      placeholder="#000000"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="h-6 w-px bg-border mx-1" />
+
+          {/* Botão de Link */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLinkClick();
+            }}
+            title="Adicionar Link"
+          >
+            <Link className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Dialog de Link Moderno */}
+        <AnimatePresence>
+          {showLinkDialog && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+              onMouseDown={(e) => {
+                // Only close if clicking on the backdrop, not the dialog
+                if (e.target === e.currentTarget) {
+                  handleLinkCancel();
+                }
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  handleLinkCancel();
+                }
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-xl shadow-2xl p-6 w-full max-w-md"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onMouseUp={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">Adicionar Link</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleLinkCancel();
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Texto selecionado */}
+                {selectedText && (
+                  <div className="mb-4 p-3 bg-muted rounded-lg">
+                    <div className="text-sm text-muted-foreground mb-1">Texto selecionado:</div>
+                    <div className="text-sm font-medium text-foreground">"{selectedText}"</div>
+                  </div>
+                )}
+
+                {/* Campos do formulário */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      URL do Link
+                    </label>
+                    <Input
+                      type="url"
+                      placeholder="https://exemplo.com"
+                      value={linkUrl}
+                      onFocus={(e) => e.stopPropagation()}
+                      onBlur={(e) => e.stopPropagation()}
+                      onChange={(e) => setLinkUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleLinkSubmit();
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          handleLinkCancel();
+                        }
+                      }}
+                      className="w-full"
+                      autoFocus
+                    />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Digite a URL completa (com https://)
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Texto do Link (opcional)
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Texto que aparecerá como link"
+                      value={linkText}
+                      onFocus={(e) => e.stopPropagation()}
+                      onBlur={(e) => e.stopPropagation()}
+                      onChange={(e) => setLinkText(e.target.value)}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleLinkSubmit();
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault();
+                          handleLinkCancel();
+                        }
+                      }}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Botões de ação */}
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleLinkCancel}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleLinkSubmit}
+                    disabled={!linkUrl.trim()}
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Adicionar Link
+                  </Button>
+                </div>
+
+                {/* Dica de uso */}
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="text-xs text-blue-600 dark:text-blue-400">
+                    💡 <strong>Dica:</strong> Selecione o texto que deseja transformar em link antes de clicar no botão de link.
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </AnimatePresence>
   );
 };
