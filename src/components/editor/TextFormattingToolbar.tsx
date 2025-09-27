@@ -49,11 +49,12 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
     const updateConstraints = () => {
       if (pickerRef.current) {
         const rect = pickerRef.current.getBoundingClientRect();
+        const bottomBarrier = 70; // Barreira invisível na parte inferior da tela em pixels para evitar sobrepor o indicador de nível
         setDragConstraints({
           top: 0,
           left: 0,
           right: window.innerWidth - rect.width,
-          bottom: window.innerHeight - rect.height,
+          bottom: window.innerHeight - rect.height - bottomBarrier,
         });
       }
     };
