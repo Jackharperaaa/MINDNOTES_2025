@@ -43,36 +43,47 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   const [colorPickerPosition, setColorPickerPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    if (showColorPalette) {
+    if (showColorPalette && toolbarRef.current) {
       const pickerWidth = 300;
       const pickerHeight = 200;
-      const margin = 20;
+      const margin = 10;
 
-      const initialX = window.innerWidth / 2 - pickerWidth / 2;
-      let defaultY = window.innerHeight / 2 - pickerHeight / 2;
-      let finalY = defaultY;
+      const toolbarRect = toolbarRef.current.getBoundingClientRect();
+      
+      // Default position: below the toolbar
+      let newY = toolbarRect.bottom + margin;
+      
+      // Center it horizontally relative to the toolbar
+      let newX = toolbarRect.left + (toolbarRect.width / 2) - (pickerWidth / 2);
 
-      if (selectionRange) {
-        const selectionRect = selectionRange.getBoundingClientRect();
-        
-        // Check for overlap
-        if (selectionRect.bottom > defaultY && selectionRect.top < defaultY + pickerHeight) {
-          // If selection is in the top half of the screen, move palette down
-          if (selectionRect.top < window.innerHeight / 2) {
-            finalY = selectionRect.bottom + margin;
-          } else { // Otherwise, move it up
-            finalY = selectionRect.top - pickerHeight - margin;
-          }
+      // --- Viewport collision detection ---
+
+      // Horizontal clamping
+      if (newX < margin) {
+        newX = margin;
+      }
+      if (newX + pickerWidth > window.innerWidth - margin) {
+        newX = window.innerWidth - pickerWidth - margin;
+      }
+
+      // Vertical clamping
+      if (newY + pickerHeight > window.innerHeight - margin) {
+        // If it goes off-screen below, try to place it above the toolbar
+        const yAbove = toolbarRect.top - pickerHeight - margin;
+        if (yAbove > margin) {
+          newY = yAbove;
+        } else {
+          // If it also goes off-screen above, clamp it to the bottom
+          newY = window.innerHeight - pickerHeight - margin;
         }
       }
-      
-      // Clamp position to be within viewport
-      finalY = Math.max(margin, finalY);
-      finalY = Math.min(finalY, window.innerHeight - pickerHeight - margin);
+      if (newY < margin) {
+        newY = margin;
+      }
 
-      setColorPickerPosition({ x: initialX, y: finalY });
+      setColorPickerPosition({ x: newX, y: newY });
     }
-  }, [showColorPalette, selectionRange]);
+  }, [showColorPalette, toolbarRef]);
 
   const handleFormatClick = (e: React.MouseEvent, format: string, value?: string) => {
     e.preventDefault();
