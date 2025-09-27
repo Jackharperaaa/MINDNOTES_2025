@@ -41,12 +41,31 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   const [saturation, setSaturation] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const [colorPickerPosition, setColorPickerPosition] = useState({ x: 0, y: 0 });
+  const [dragConstraints, setDragConstraints] = useState({ top: 0, left: 0, right: 0, bottom: 0 });
+
+  const pickerWidth = 300;
+  const pickerHeight = 200;
+
+  // Effect to set and update drag constraints based on window size
+  useEffect(() => {
+    const updateConstraints = () => {
+      setDragConstraints({
+        top: 0,
+        left: 0,
+        right: window.innerWidth - pickerWidth,
+        bottom: window.innerHeight - pickerHeight,
+      });
+    };
+
+    window.addEventListener('resize', updateConstraints);
+    updateConstraints(); // Set initial constraints
+
+    return () => window.removeEventListener('resize', updateConstraints);
+  }, []);
 
   useEffect(() => {
     // A posição da paleta agora é baseada no texto selecionado (selectionRange)
     if (showColorPalette && selectionRange) {
-      const pickerWidth = 300;
-      const pickerHeight = 200;
       const margin = 15; // A distância "5cm" abaixo do texto
 
       const rangeRect = selectionRange.getBoundingClientRect();
@@ -158,7 +177,7 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
         {showColorPalette && (
           <motion.div
             drag
-            dragConstraints={{ left: 0, right: window.innerWidth - 300, top: 0, bottom: window.innerHeight - 200 }}
+            dragConstraints={dragConstraints}
             style={{ 
               position: 'fixed',
               left: colorPickerPosition.x, 
