@@ -16,6 +16,7 @@ interface TextFormattingToolbarProps {
   visible: boolean;
   position?: { x: number; y: number };
   toolbarRef: RefObject<HTMLDivElement>;
+  selectionRange: Range | null;
 }
 
 const hsbToRgb = (h: number, s: number, b: number) => {
@@ -34,7 +35,7 @@ const rgbToHex = (r: number, g: number, b: number) => {
   return `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
 };
 
-export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position = { x: 0, y: 0 }, toolbarRef }: TextFormattingToolbarProps) => {
+export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position = { x: 0, y: 0 }, toolbarRef, selectionRange }: TextFormattingToolbarProps) => {
   const [showColorPalette, setShowColorPalette] = useState(false);
   const [currentHue, setCurrentHue] = useState(0);
   const [saturation, setSaturation] = useState(100);
@@ -44,13 +45,34 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   useEffect(() => {
     if (showColorPalette) {
       const pickerWidth = 300;
-      const pickerHeight = 200; // Approximate height
-      // Center horizontally, and position slightly below the vertical center
-      const initialX = window.innerWidth / 2 - (pickerWidth / 2);
-      const initialY = window.innerHeight / 2 - (pickerHeight / 2) + 80; // 80px offset downwards
-      setColorPickerPosition({ x: initialX, y: initialY });
+      const pickerHeight = 200;
+      const margin = 20;
+
+      const initialX = window.innerWidth / 2 - pickerWidth / 2;
+      let defaultY = window.innerHeight / 2 - pickerHeight / 2;
+      let finalY = defaultY;
+
+      if (selectionRange) {
+        const selectionRect = selectionRange.getBoundingClientRect();
+        
+        // Check for overlap
+        if (selectionRect.bottom > defaultY && selectionRect.top < defaultY + pickerHeight) {
+          // If selection is in the top half of the screen, move palette down
+          if (selectionRect.top < window.innerHeight / 2) {
+            finalY = selectionRect.bottom + margin;
+          } else { // Otherwise, move it up
+            finalY = selectionRect.top - pickerHeight - margin;
+          }
+        }
+      }
+      
+      // Clamp position to be within viewport
+      finalY = Math.max(margin, finalY);
+      finalY = Math.min(finalY, window.innerHeight - pickerHeight - margin);
+
+      setColorPickerPosition({ x: initialX, y: finalY });
     }
-  }, [showColorPalette]);
+  }, [showColorPalette, selectionRange]);
 
   const handleFormatClick = (e: React.MouseEvent, format: string, value?: string) => {
     e.preventDefault();

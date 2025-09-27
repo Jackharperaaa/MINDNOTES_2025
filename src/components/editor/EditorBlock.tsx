@@ -170,6 +170,7 @@ export const EditorBlock = ({
           onLinkClick={() => setIsLinkDialogOpen(true)}
           visible={showToolbar}
           position={toolbarPosition}
+          selectionRange={lastSelectionRange}
         />
       )}
 
