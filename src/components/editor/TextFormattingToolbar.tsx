@@ -45,7 +45,8 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
     if (showColorPalette) {
       const pickerWidth = 300;
       const pickerHeight = 200;
-      const initialX = window.innerWidth * 0.75 - (pickerWidth / 2);
+      // Center the color picker horizontally and vertically on the screen
+      const initialX = window.innerWidth / 2 - (pickerWidth / 2);
       const initialY = window.innerHeight / 2 - (pickerHeight / 2);
       setColorPickerPosition({ x: initialX, y: initialY });
     }
