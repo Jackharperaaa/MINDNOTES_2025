@@ -1,4 +1,4 @@
-import React, { useState, useEffect, RefObject } from 'react';
+import React, { useState, useEffect, RefObject, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bold, 
@@ -41,56 +41,51 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   const [saturation, setSaturation] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const [colorPickerPosition, setColorPickerPosition] = useState({ x: 0, y: 0 });
-  const [dragConstraints, setDragConstraints] = useState({ top: 0, left: 0, right: 0, bottom: 0 });
+  
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [dragConstraints, setDragConstraints] = useState<object | boolean>(false);
 
-  const pickerWidth = 300;
-  const pickerHeight = 200;
-
-  // Effect to set and update drag constraints based on window size
-  useEffect(() => {
+  useLayoutEffect(() => {
     const updateConstraints = () => {
-      setDragConstraints({
-        top: 0,
-        left: 0,
-        right: window.innerWidth - pickerWidth,
-        bottom: window.innerHeight - pickerHeight,
-      });
+      if (pickerRef.current) {
+        const rect = pickerRef.current.getBoundingClientRect();
+        setDragConstraints({
+          top: 0,
+          left: 0,
+          right: window.innerWidth - rect.width,
+          bottom: window.innerHeight - rect.height,
+        });
+      }
     };
 
-    window.addEventListener('resize', updateConstraints);
-    updateConstraints(); // Set initial constraints
-
-    return () => window.removeEventListener('resize', updateConstraints);
-  }, []);
+    if (showColorPalette) {
+      updateConstraints();
+      window.addEventListener('resize', updateConstraints);
+      return () => window.removeEventListener('resize', updateConstraints);
+    } else {
+      setDragConstraints(false);
+    }
+  }, [showColorPalette]);
 
   useEffect(() => {
-    // A posição da paleta agora é baseada no texto selecionado (selectionRange)
-    if (showColorPalette && selectionRange) {
-      const margin = 15; // A distância "5cm" abaixo do texto
+    if (showColorPalette && selectionRange && pickerRef.current) {
+      const pickerWidth = pickerRef.current.offsetWidth;
+      const pickerHeight = pickerRef.current.offsetHeight;
+      const margin = 15;
 
       const rangeRect = selectionRange.getBoundingClientRect();
-
-      // Se a seleção não tiver dimensão (apenas um cursor), não faz nada.
       if (rangeRect.width === 0 && rangeRect.height === 0) return;
 
-      // Horizontal: Centraliza a paleta em relação ao texto selecionado
       let newX = rangeRect.left + window.scrollX + (rangeRect.width / 2) - (pickerWidth / 2);
-      
-      // Vertical: Posiciona a paleta abaixo do texto selecionado
       let newY = rangeRect.bottom + window.scrollY + margin;
 
-      // --- Detecção de colisão com a tela ---
-
-      // Garante que não saia pelos lados
       newX = Math.max(margin, newX);
       newX = Math.min(newX, window.innerWidth - pickerWidth - margin);
 
-      // Se sair por baixo, posiciona acima do texto
       if (newY + pickerHeight > window.innerHeight - margin) {
         newY = rangeRect.top + window.scrollY - pickerHeight - margin;
       }
       
-      // Garante que não saia por cima
       newY = Math.max(margin, newY);
 
       setColorPickerPosition({ x: newX, y: newY });
@@ -176,6 +171,7 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
       <AnimatePresence>
         {showColorPalette && (
           <motion.div
+            ref={pickerRef}
             drag
             dragConstraints={dragConstraints}
             style={{ 
