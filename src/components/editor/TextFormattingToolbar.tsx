@@ -46,26 +46,39 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   const [dragConstraints, setDragConstraints] = useState<object | boolean>(false);
 
   useLayoutEffect(() => {
+    if (!showColorPalette || !pickerRef.current) {
+      setDragConstraints(false);
+      return;
+    }
+
+    const target = pickerRef.current;
+
     const updateConstraints = () => {
-      if (pickerRef.current) {
-        const rect = pickerRef.current.getBoundingClientRect();
-        const bottomBarrier = 70; // Barreira invisível na parte inferior da tela em pixels para evitar sobrepor o indicador de nível
-        setDragConstraints({
-          top: 0,
-          left: 0,
-          right: window.innerWidth - rect.width,
-          bottom: window.innerHeight - rect.height - bottomBarrier,
-        });
-      }
+      const rect = target.getBoundingClientRect();
+      // Evita definir restrições se o elemento ainda não tiver sido renderizado com tamanho
+      if (rect.height === 0 || rect.width === 0) return;
+
+      const bottomBarrier = 70; // Barreira invisível na parte inferior
+      setDragConstraints({
+        top: 0,
+        left: 0,
+        right: window.innerWidth - rect.width,
+        bottom: window.innerHeight - rect.height - bottomBarrier,
+      });
     };
 
-    if (showColorPalette) {
-      updateConstraints();
-      window.addEventListener('resize', updateConstraints);
-      return () => window.removeEventListener('resize', updateConstraints);
-    } else {
-      setDragConstraints(false);
-    }
+    // Usa ResizeObserver para atualizar as restrições quando o tamanho do seletor muda
+    const observer = new ResizeObserver(updateConstraints);
+    observer.observe(target);
+
+    // Também atualiza no redimensionamento da janela para mudanças no viewport
+    window.addEventListener('resize', updateConstraints);
+
+    // Limpeza ao desmontar
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateConstraints);
+    };
   }, [showColorPalette]);
 
   useEffect(() => {
