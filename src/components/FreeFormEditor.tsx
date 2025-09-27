@@ -34,16 +34,24 @@ export const FreeFormEditor = ({ note, onSave, onDelete, onCancel }: FreeFormEdi
 
   const handleSave = () => {
     if (title.trim()) {
-      // Convert blocks back to HTML for backward compatibility
+      // Convert blocks back to HTML for backward compatibility and simple previews
       const htmlContent = blocks.map(block => {
+        const content = block.content || '';
         switch (block.type) {
-          case 'heading1': return `<h1>${block.content}</h1>`;
-          case 'heading2': return `<h2>${block.content}</h2>`;
-          case 'heading3': return `<h3>${block.content}</h3>`;
-          case 'quote': return `<blockquote>${block.content}</blockquote>`;
-          case 'code': return `<pre><code>${block.content}</code></pre>`;
+          case 'heading1': return `<h1>${content}</h1>`;
+          case 'heading2': return `<h2>${content}</h2>`;
+          case 'heading3': return `<h3>${content}</h3>`;
+          case 'quote': return `<blockquote>${content}</blockquote>`;
+          case 'code': return `<pre><code>${content}</code></pre>`;
+          case 'bullet': return `<ul><li>${content}</li></ul>`; // Simplified for preview
+          case 'numbered': return `<ol><li>${content}</li></ol>`; // Simplified for preview
+          case 'checklist': return `<div>[${block.checked ? 'x' : ' '}] ${content}</div>`;
+          case 'link': return `<a href="${block.metadata?.url || '#'}">${block.metadata?.url || content}</a>`;
+          case 'image': return `<img src="${block.metadata?.urls?.[0] || ''}" alt="${content}" />`;
+          case 'video': return `<p>Vídeo: ${block.metadata?.url || ''}</p>`;
+          case 'gif': return `<img src="${block.metadata?.url || ''}" alt="${content}" />`;
           case 'divider': return '<hr>';
-          default: return `<p>${block.content}</p>`;
+          default: return `<p>${content}</p>`;
         }
       }).join('');
       

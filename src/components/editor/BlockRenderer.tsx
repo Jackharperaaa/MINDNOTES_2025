@@ -8,8 +8,11 @@ import { TextBlock } from './blocks/TextBlock';
 import { CodeBlock } from './blocks/CodeBlock';
 import { ChecklistBlock } from './blocks/ChecklistBlock';
 import { ImageBlock } from './blocks/ImageBlock';
-// NOTE: For brevity, other block components like Quote, List, Video, etc. would be imported here.
-// The current implementation will default to TextBlock for missing components.
+import { ListItemBlock } from './blocks/ListItemBlock';
+import { QuoteBlock } from './blocks/QuoteBlock';
+import { VideoBlock } from './blocks/VideoBlock';
+import { GifBlock } from './blocks/GifBlock';
+import { LinkBlock } from './blocks/LinkBlock';
 
 interface BlockRendererProps extends Omit<BlockProps, 'block' | 'onUpdate'> {
   block: BlockType;
@@ -24,13 +27,12 @@ const blockComponentMap: { [key: string]: React.FC<BlockProps> } = {
   code: CodeBlock,
   checklist: ChecklistBlock,
   image: ImageBlock,
-  // TODO: Add other block types here
-  // gif: GifBlock,
-  // video: VideoBlock,
-  // link: LinkBlock,
-  // quote: QuoteBlock,
-  // bullet: ListItemBlock,
-  // numbered: ListItemBlock,
+  bullet: ListItemBlock,
+  numbered: ListItemBlock,
+  quote: QuoteBlock,
+  video: VideoBlock,
+  gif: GifBlock,
+  link: LinkBlock,
 };
 
 export const BlockRenderer: React.FC<BlockRendererProps> = (props) => {
