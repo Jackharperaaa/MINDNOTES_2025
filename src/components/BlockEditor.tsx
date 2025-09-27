@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { EditorBlock } from './EditorBlock';
+import { EditorBlock } from './editor/EditorBlock';
 import { FormatMenu } from './FormatMenu';
 import { EditorBlock as BlockType } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -120,7 +120,7 @@ export const BlockEditor = ({
       {/* Editor blocks */}
       <div className="space-y-1">
         <AnimatePresence mode="popLayout">
-          {blocks.map((block, index) => <EditorBlock key={block.id} block={block} index={index} onUpdate={updateBlock} onDelete={deleteBlock} onAddBlock={(blockIndex, type) => {
+          {blocks.map((block, index) => <EditorBlock key={block.id} block={block} index={index} onUpdate={(idx, partialBlock) => updateBlock(idx, {...block, ...partialBlock})} onDelete={deleteBlock} onAddBlock={(blockIndex, type) => {
           addBlock(blockIndex, type);
         }} onCreateSubpage={onCreateSubpage} />)}
         </AnimatePresence>
