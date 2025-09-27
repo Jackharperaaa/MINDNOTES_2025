@@ -50,36 +50,21 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
 
       const toolbarRect = toolbarRef.current.getBoundingClientRect();
       
-      // Default position: below the toolbar
-      let newY = toolbarRect.bottom + margin;
-      
-      // Center it horizontally relative to the toolbar
+      // Horizontal position: Center it relative to the toolbar, but clamp within the viewport.
       let newX = toolbarRect.left + (toolbarRect.width / 2) - (pickerWidth / 2);
+      newX = Math.max(margin, newX);
+      newX = Math.min(newX, window.innerWidth - pickerWidth - margin);
 
-      // --- Viewport collision detection ---
+      // Vertical position: Try below first.
+      let newY = toolbarRect.bottom + margin;
 
-      // Horizontal clamping
-      if (newX < margin) {
-        newX = margin;
-      }
-      if (newX + pickerWidth > window.innerWidth - margin) {
-        newX = window.innerWidth - pickerWidth - margin;
-      }
-
-      // Vertical clamping
+      // If placing it below goes off-screen, place it above.
       if (newY + pickerHeight > window.innerHeight - margin) {
-        // If it goes off-screen below, try to place it above the toolbar
-        const yAbove = toolbarRect.top - pickerHeight - margin;
-        if (yAbove > margin) {
-          newY = yAbove;
-        } else {
-          // If it also goes off-screen above, clamp it to the bottom
-          newY = window.innerHeight - pickerHeight - margin;
-        }
+        newY = toolbarRect.top - pickerHeight - margin;
       }
-      if (newY < margin) {
-        newY = margin;
-      }
+
+      // A final clamp to prevent it from going off the top of the screen.
+      newY = Math.max(margin, newY);
 
       setColorPickerPosition({ x: newX, y: newY });
     }
@@ -161,14 +146,15 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
             drag
             dragConstraints={{ left: 0, right: window.innerWidth - 300, top: 0, bottom: window.innerHeight - 200 }}
             style={{ 
-              x: colorPickerPosition.x, 
-              y: colorPickerPosition.y 
+              position: 'fixed',
+              left: colorPickerPosition.x, 
+              top: colorPickerPosition.y 
             }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px] cursor-grab"
+            className="z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px] cursor-grab"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
