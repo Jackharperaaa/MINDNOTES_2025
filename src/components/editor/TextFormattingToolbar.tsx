@@ -1,4 +1,4 @@
-import React, { useState, useEffect, RefObject, useRef } from 'react';
+import React, { useState, useEffect, RefObject } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bold, 
@@ -41,43 +41,42 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   const [saturation, setSaturation] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const [colorPickerPosition, setColorPickerPosition] = useState({ x: 0, y: 0 });
-  const paletteButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (showColorPalette && paletteButtonRef.current) {
+    // A posição da paleta agora é baseada no texto selecionado (selectionRange)
+    if (showColorPalette && selectionRange) {
       const pickerWidth = 300;
       const pickerHeight = 200;
-      const margin = 10;
+      const margin = 15; // A distância "5cm" abaixo do texto
 
-      const buttonRect = paletteButtonRef.current.getBoundingClientRect();
+      const rangeRect = selectionRange.getBoundingClientRect();
+
+      // Se a seleção não tiver dimensão (apenas um cursor), não faz nada.
+      if (rangeRect.width === 0 && rangeRect.height === 0) return;
+
+      // Horizontal: Centraliza a paleta em relação ao texto selecionado
+      let newX = rangeRect.left + window.scrollX + (rangeRect.width / 2) - (pickerWidth / 2);
       
-      // Horizontal position: Center the picker on the palette button
-      let newX = buttonRect.left + (buttonRect.width / 2) - (pickerWidth / 2);
-      
-      // Vertical position: Try below first.
-      let newY = buttonRect.bottom + margin;
+      // Vertical: Posiciona a paleta abaixo do texto selecionado
+      let newY = rangeRect.bottom + window.scrollY + margin;
 
-      // --- Viewport collision detection ---
+      // --- Detecção de colisão com a tela ---
 
-      // Horizontal clamping
-      if (newX < margin) {
-        newX = margin;
-      }
-      if (newX + pickerWidth > window.innerWidth - margin) {
-        newX = window.innerWidth - pickerWidth - margin;
-      }
+      // Garante que não saia pelos lados
+      newX = Math.max(margin, newX);
+      newX = Math.min(newX, window.innerWidth - pickerWidth - margin);
 
-      // Vertical clamping
-      // If placing it below goes off-screen, place it above.
+      // Se sair por baixo, posiciona acima do texto
       if (newY + pickerHeight > window.innerHeight - margin) {
-        newY = buttonRect.top - pickerHeight - margin;
+        newY = rangeRect.top + window.scrollY - pickerHeight - margin;
       }
-      // A final clamp to prevent it from going off the top of the screen.
+      
+      // Garante que não saia por cima
       newY = Math.max(margin, newY);
 
       setColorPickerPosition({ x: newX, y: newY });
     }
-  }, [showColorPalette]);
+  }, [showColorPalette, selectionRange]);
 
   const handleFormatClick = (e: React.MouseEvent, format: string, value?: string) => {
     e.preventDefault();
@@ -140,7 +139,6 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
           </Button>
           <div className="h-6 w-px bg-border mx-1" />
           <Button
-            ref={paletteButtonRef}
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
