@@ -44,10 +44,10 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   useEffect(() => {
     if (showColorPalette) {
       const pickerWidth = 300;
-      const pickerHeight = 200;
-      // Center the color picker horizontally and vertically on the screen
+      const pickerHeight = 200; // Approximate height
+      // Center horizontally, and position slightly below the vertical center
       const initialX = window.innerWidth / 2 - (pickerWidth / 2);
-      const initialY = window.innerHeight / 2 - (pickerHeight / 2);
+      const initialY = window.innerHeight / 2 - (pickerHeight / 2) + 80; // 80px offset downwards
       setColorPickerPosition({ x: initialX, y: initialY });
     }
   }, [showColorPalette]);
@@ -125,15 +125,17 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
       <AnimatePresence>
         {showColorPalette && (
           <motion.div
+            drag
+            dragConstraints={{ left: 0, right: window.innerWidth - 300, top: 0, bottom: window.innerHeight - 200 }}
             style={{ 
-              left: colorPickerPosition.x, 
-              top: colorPickerPosition.y 
+              x: colorPickerPosition.x, 
+              y: colorPickerPosition.y 
             }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px]"
+            className="fixed z-60 bg-popover border border-border rounded-xl shadow-2xl p-4 w-[300px] cursor-grab"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
