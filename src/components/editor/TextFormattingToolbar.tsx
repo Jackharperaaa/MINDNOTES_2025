@@ -46,37 +46,39 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   const [dragConstraints, setDragConstraints] = useState<object | boolean>(false);
 
   useLayoutEffect(() => {
-    if (!showColorPalette || !pickerRef.current) {
+    // Se o seletor de cores não estiver visível, remove as restrições.
+    if (!showColorPalette) {
       setDragConstraints(false);
       return;
     }
 
-    const target = pickerRef.current;
-
     const updateConstraints = () => {
-      const rect = target.getBoundingClientRect();
-      // Evita definir restrições se o elemento ainda não tiver sido renderizado com tamanho
-      if (rect.height === 0 || rect.width === 0) return;
+      // Garante que a referência ao elemento existe.
+      if (pickerRef.current) {
+        const rect = pickerRef.current.getBoundingClientRect();
+        const bottomBarrier = 80; // Aumentei a barreira para 80px para ser mais seguro.
 
-      const bottomBarrier = 70; // Barreira invisível na parte inferior
-      setDragConstraints({
-        top: 0,
-        left: 0,
-        right: window.innerWidth - rect.width,
-        bottom: window.innerHeight - rect.height - bottomBarrier,
-      });
+        // Apenas define as restrições se o elemento tiver um tamanho válido.
+        if (rect.width > 0 && rect.height > 0) {
+          setDragConstraints({
+            top: 0,
+            left: 0,
+            right: window.innerWidth - rect.width,
+            bottom: window.innerHeight - rect.height - bottomBarrier,
+          });
+        }
+      }
     };
 
-    // Usa ResizeObserver para atualizar as restrições quando o tamanho do seletor muda
-    const observer = new ResizeObserver(updateConstraints);
-    observer.observe(target);
-
-    // Também atualiza no redimensionamento da janela para mudanças no viewport
+    // Um pequeno atraso para garantir que o DOM foi renderizado e o `rect` terá dimensões corretas.
+    const timer = setTimeout(updateConstraints, 50);
+    
+    // Também atualiza as restrições se a janela for redimensionada.
     window.addEventListener('resize', updateConstraints);
 
-    // Limpeza ao desmontar
+    // Limpeza do efeito.
     return () => {
-      observer.disconnect();
+      clearTimeout(timer);
       window.removeEventListener('resize', updateConstraints);
     };
   }, [showColorPalette]);
