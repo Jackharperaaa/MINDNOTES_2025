@@ -1,4 +1,4 @@
-import React, { useState, useEffect, RefObject } from 'react';
+import React, { useState, useEffect, RefObject, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bold, 
@@ -41,34 +41,43 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
   const [saturation, setSaturation] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const [colorPickerPosition, setColorPickerPosition] = useState({ x: 0, y: 0 });
+  const paletteButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (showColorPalette && toolbarRef.current) {
+    if (showColorPalette && paletteButtonRef.current) {
       const pickerWidth = 300;
       const pickerHeight = 200;
       const margin = 10;
 
-      const toolbarRect = toolbarRef.current.getBoundingClientRect();
+      const buttonRect = paletteButtonRef.current.getBoundingClientRect();
       
-      // Horizontal position: Center it relative to the toolbar, but clamp within the viewport.
-      let newX = toolbarRect.left + (toolbarRect.width / 2) - (pickerWidth / 2);
-      newX = Math.max(margin, newX);
-      newX = Math.min(newX, window.innerWidth - pickerWidth - margin);
-
+      // Horizontal position: Center the picker on the palette button
+      let newX = buttonRect.left + (buttonRect.width / 2) - (pickerWidth / 2);
+      
       // Vertical position: Try below first.
-      let newY = toolbarRect.bottom + margin;
+      let newY = buttonRect.bottom + margin;
 
-      // If placing it below goes off-screen, place it above.
-      if (newY + pickerHeight > window.innerHeight - margin) {
-        newY = toolbarRect.top - pickerHeight - margin;
+      // --- Viewport collision detection ---
+
+      // Horizontal clamping
+      if (newX < margin) {
+        newX = margin;
+      }
+      if (newX + pickerWidth > window.innerWidth - margin) {
+        newX = window.innerWidth - pickerWidth - margin;
       }
 
+      // Vertical clamping
+      // If placing it below goes off-screen, place it above.
+      if (newY + pickerHeight > window.innerHeight - margin) {
+        newY = buttonRect.top - pickerHeight - margin;
+      }
       // A final clamp to prevent it from going off the top of the screen.
       newY = Math.max(margin, newY);
 
       setColorPickerPosition({ x: newX, y: newY });
     }
-  }, [showColorPalette, toolbarRef]);
+  }, [showColorPalette]);
 
   const handleFormatClick = (e: React.MouseEvent, format: string, value?: string) => {
     e.preventDefault();
@@ -130,7 +139,14 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
             <Underline className="h-4 w-4" />
           </Button>
           <div className="h-6 w-px bg-border mx-1" />
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.preventDefault(); setShowColorPalette(!showColorPalette); }} title="Cor do Texto">
+          <Button
+            ref={paletteButtonRef}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={(e) => { e.preventDefault(); setShowColorPalette(!showColorPalette); }}
+            title="Cor do Texto"
+          >
             <Palette className="h-4 w-4" />
           </Button>
           <div className="h-6 w-px bg-border mx-1" />
