@@ -125,10 +125,10 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
       <AnimatePresence>
         {showColorPalette && (
           <motion.div
-            drag
-            dragConstraints={{ left: 0, right: window.innerWidth - 300, top: 0, bottom: window.innerHeight - 200 }}
-            onDragEnd={(event, info) => setColorPickerPosition({ x: info.point.x, y: info.point.y })}
-            style={{ x: colorPickerPosition.x, y: colorPickerPosition.y }}
+            style={{ 
+              left: colorPickerPosition.x, 
+              top: colorPickerPosition.y 
+            }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
