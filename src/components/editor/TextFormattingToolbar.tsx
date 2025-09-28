@@ -56,7 +56,8 @@ export const TextFormattingToolbar = ({ onFormat, onLinkClick, visible, position
       // Garante que a referência ao elemento existe.
       if (pickerRef.current) {
         const rect = pickerRef.current.getBoundingClientRect();
-        const bottomBarrier = 80; // Aumentei a barreira para 80px para ser mais seguro.
+        // 10cm é aproximadamente 378 pixels. Esta é a barreira inferior.
+        const bottomBarrier = 378; 
 
         // Apenas define as restrições se o elemento tiver um tamanho válido.
         if (rect.width > 0 && rect.height > 0) {
