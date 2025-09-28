@@ -248,11 +248,11 @@ export const NotesSection = ({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-card border border-border rounded-lg"
+              className="bg-card border border-border rounded-lg cursor-pointer"
+              onClick={() => setEditingNote(note)}
             >
               <div
-                className="flex items-center justify-between p-4 border-b border-border cursor-pointer"
-                onClick={() => setEditingNote(note)}
+                className="flex items-center justify-between p-4 border-b border-border"
               >
                 <h3 className="text-lg font-semibold text-foreground">{note.title}</h3>
                 <button
@@ -260,7 +260,7 @@ export const NotesSection = ({
                     e.stopPropagation();
                     toggleNoteMinimize(note.id);
                   }}
-                  className="text-gray-400 hover:text-gray-300 transition-colors"
+                  className="text-gray-400 hover:text-gray-300 transition-colors z-10 relative"
                 >
                   {minimizedNotes.has(note.id) ? (
                     <ChevronDown className="w-5 h-5" />
@@ -276,8 +276,7 @@ export const NotesSection = ({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="p-6 cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => setEditingNote(note)}
+                    className="p-6 hover:bg-accent/50 transition-colors"
                   >
                     <div 
                       className="text-muted-foreground text-sm line-clamp-3"

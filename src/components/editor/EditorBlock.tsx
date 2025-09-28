@@ -140,7 +140,7 @@ export const EditorBlock = ({
             exit={{ opacity: 0 }}
             className="absolute -left-8 top-0 flex flex-col gap-1"
           >
-            <Button size="sm" variant="ghost" className="w-6 h-6 p-0 opacity-0 group-hover:opacity-100" onClick={() => onAddBlock(index + 1, 'text')}>
+            <Button size="sm" variant="ghost" className="w-6 h-6 p-0 opacity-0 group-hover:opacity-100" onClick={() => onAddBlock(index, 'text')}>
               <Plus className="w-3 h-3" />
             </Button>
             <Button size="sm" variant="ghost" className="w-6 h-6 p-0 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => onDelete(index)}>
@@ -154,9 +154,9 @@ export const EditorBlock = ({
         <BlockRenderer
           block={block}
           index={index}
-          onUpdate={(idx, partialBlock) => onUpdate(idx, { ...block, ...partialBlock })}
+          onUpdate={onUpdate}
           onDelete={() => onDelete(index)}
-          onAddBlock={(type) => onAddBlock(index + 1, type)}
+          onAddBlock={(type) => onAddBlock(index, type)}
           commonProps={commonProps}
           contentEditableRef={contentEditableRef}
           setExpandedImageUrl={setExpandedImageUrl}
