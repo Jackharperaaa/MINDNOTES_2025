@@ -250,7 +250,10 @@ export const NotesSection = ({
               exit={{ opacity: 0, y: -20 }}
               className="bg-card border border-border rounded-lg"
             >
-              <div className="flex items-center justify-between p-4 border-b border-border">
+              <div
+                className="flex items-center justify-between p-4 border-b border-border cursor-pointer"
+                onClick={() => setEditingNote(note)}
+              >
                 <h3 className="text-lg font-semibold text-foreground">{note.title}</h3>
                 <button
                   onClick={(e) => {

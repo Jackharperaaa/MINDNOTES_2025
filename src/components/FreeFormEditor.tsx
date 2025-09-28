@@ -16,19 +16,32 @@ interface FreeFormEditorProps {
 
 export const FreeFormEditor = ({ note, onSave, onDelete, onCancel }: FreeFormEditorProps) => {
   const { t } = useLanguage();
-  const [title, setTitle] = useState(note?.title || '');
-  const [blocks, setBlocks] = useState<EditorBlock[]>(note?.blocks || []);
+  const [title, setTitle] = useState('');
+  const [blocks, setBlocks] = useState<EditorBlock[]>([]);
 
-  // Convert legacy content to blocks on first load
+  // Effect to initialize and update state when the note prop changes
   useEffect(() => {
-    if (note && note.content && (!note.blocks || note.blocks.length === 0)) {
-      // Convert HTML content to a single text block for legacy notes
-      const legacyBlock: EditorBlock = {
-        id: `block-${Date.now()}`,
-        type: 'text',
-        content: note.content.replace(/<[^>]*>/g, ''), // Strip HTML tags
-      };
-      setBlocks([legacyBlock]);
+    setTitle(note?.title || '');
+
+    const initialBlock = { id: `block-${Date.now()}`, type: 'text' as const, content: '' };
+
+    if (note) {
+      // Existing note: use its blocks if they exist
+      if (note.blocks && note.blocks.length > 0) {
+        setBlocks(note.blocks);
+      } 
+      // Legacy note: convert HTML content to a text block
+      else if (note.content) {
+        setBlocks([{ ...initialBlock, content: note.content.replace(/<[^>]*>/g, '') }]);
+      } 
+      // Existing note is completely empty
+      else {
+        setBlocks([initialBlock]);
+      }
+    } 
+    // New note
+    else {
+      setBlocks([initialBlock]);
     }
   }, [note]);
 
