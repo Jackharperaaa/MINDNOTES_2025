@@ -76,6 +76,14 @@
     @apply bg-background text-foreground;
   }
 
+  /* Custom text selection style to preserve text color */
+  ::selection {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+  ::-moz-selection { /* Firefox */
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+
   /* ContentEditable placeholder styling */
   [contenteditable]:empty:before {
     content: attr(data-placeholder);
