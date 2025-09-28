@@ -2,14 +2,12 @@ import React, { useRef, useEffect, HTMLAttributes, forwardRef } from 'react';
 
 interface ContentEditableDivProps extends HTMLAttributes<HTMLDivElement> {
   initialHTML: string;
-  onBlur: (html: string) => void;
+  onHTMLChange: (html: string) => void;
 }
 
 export const ContentEditableDiv = forwardRef<HTMLDivElement, ContentEditableDivProps>(
-  ({ initialHTML, onBlur, ...props }, ref) => {
+  ({ initialHTML, onHTMLChange, ...props }, ref) => {
     const internalRef = useRef<HTMLDivElement>(null);
-
-    // Use the passed ref or the internal ref
     const currentRef = (ref as React.MutableRefObject<HTMLDivElement>) || internalRef;
 
     useEffect(() => {
@@ -18,20 +16,17 @@ export const ContentEditableDiv = forwardRef<HTMLDivElement, ContentEditableDivP
       }
     }, [initialHTML]);
 
-    const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-      onBlur(e.currentTarget.innerHTML);
-      if (props.onBlur) {
-        props.onBlur(e);
-      }
+    const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+      onHTMLChange(e.currentTarget.innerHTML);
     };
 
     return (
       <div
+        {...props}
         ref={currentRef}
         contentEditable
         suppressContentEditableWarning
-        onBlur={handleBlur}
-        {...props}
+        onInput={handleInput}
       />
     );
   }

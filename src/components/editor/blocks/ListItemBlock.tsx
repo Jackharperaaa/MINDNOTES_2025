@@ -30,7 +30,7 @@ export const ListItemBlock: React.FC<BlockProps> = ({ block, onUpdate, onDelete,
       <ContentEditableDiv
         ref={contentEditableRef}
         initialHTML={block.content || ''}
-        onBlur={(html) => onUpdate({ content: html })}
+        onHTMLChange={(html) => onUpdate({ content: html })}
         onKeyDown={handleKeyDown}
         className={cn(
           "w-full bg-transparent border-none outline-none resize-none text-foreground min-h-[24px] p-1",
