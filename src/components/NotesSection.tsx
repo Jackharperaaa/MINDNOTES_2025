@@ -254,7 +254,10 @@ export const NotesSection = ({
               <div
                 className="flex items-center justify-between p-4 border-b border-border"
               >
-                <h3 className="text-lg font-semibold text-foreground">{note.title}</h3>
+                <h3
+                  className="text-lg font-semibold text-foreground"
+                  dangerouslySetInnerHTML={{ __html: note.title }}
+                />
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
