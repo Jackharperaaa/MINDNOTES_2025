@@ -9,6 +9,7 @@ import { NotesSection } from './NotesSection';
 import { ChatSection } from './ChatSection';
 import { LanguageSelector } from './LanguageSelector';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { LevelUpCelebration } from './LevelUpCelebration';
 
 const initialUserProgress: UserProgress = {
   level: 0,
@@ -248,10 +249,14 @@ export const MindNotesApp = () => {
           {/* Level Indicator - Fixed Position */}
           <LevelIndicator 
             userProgress={safeAppState.userProgress} 
-            showLevelUp={showLevelUp}
           />
         </div>
       </div>
+
+      <LevelUpCelebration 
+        isVisible={showLevelUp} 
+        newLevel={safeAppState.userProgress.level} 
+      />
     </div>
   );
 };

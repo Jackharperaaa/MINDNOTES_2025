@@ -1,29 +1,14 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { UserProgress } from '@/types';
-import { useState, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { PixelMascot } from './PixelMascot';
 
 interface LevelIndicatorProps {
   userProgress: UserProgress;
-  showLevelUp?: boolean;
 }
 
 export const LevelIndicator = ({
   userProgress,
-  showLevelUp = false
 }: LevelIndicatorProps) => {
-  const { t } = useLanguage();
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  useEffect(() => {
-    if (showLevelUp) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => setIsAnimating(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [showLevelUp]);
-
   const progressPercentage = userProgress.experienceToNext > 0 ? (userProgress.experience % 100) / 100 * 100 : 100;
 
   const getMascotState = () => {
@@ -58,19 +43,6 @@ export const LevelIndicator = ({
               {userProgress.experience} XP
             </span>
           </div>
-          
-          <AnimatePresence>
-            {isAnimating && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: -10 }}
-                className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap"
-              >
-                Level Up! +{userProgress.level}
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
     </motion.div>
