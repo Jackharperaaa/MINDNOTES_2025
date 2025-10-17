@@ -54,72 +54,44 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('open-router-proxy', {
+      // Chama a nova Edge Function 'gemini-proxy'
+      const { data, error } = await supabase.functions.invoke('gemini-proxy', {
         body: {
-          messages: [
-            {
-              "role": "system",
-              "content": "Você é um assistente de produtividade. Responda em português brasileiro. Quando os usuários pedirem listas de tarefas, responda APENAS com:\n\nTITULO: [Título curto e claro]\nVIDEO: [URL do YouTube se relevante, caso contrário omita esta linha]\nTAREFAS:\n1. [Tarefa específica e acionável]\n2. [Tarefa específica e acionável]\n3. [Tarefa específica e acionável]\n4. [Tarefa específica e acionável]\n5. [Tarefa específica e acionável]\n\nSem texto extra, explicações ou símbolos. Mantenha as tarefas concretas e acionáveis. Máximo 8 tarefas. Inclua a linha VIDEO apenas se o usuário mencionar especificamente vídeos do YouTube ou se você estiver recomendando conteúdo educacional relevante."
-            },
-            {
-              "role": "user",
-              "content": content
-            }
-          ]
+          user_message: content
         },
       });
 
       if (error) {
-        // Erro do cliente Supabase (rede, etc.)
-        throw new Error(`Erro de rede ou cliente Supabase: ${error.message}`);
+        throw new Error(`Erro ao invocar a Edge Function: ${error.message}`);
       }
       
-      // Verifica por erros retornados pela própria Edge Function (ex: 401, 500)
       if (data.error) {
         throw new Error(data.error);
       }
 
-      const botResponse = data.choices?.[0]?.message?.content || "Desculpe, não consegui processar sua solicitação agora.";
+      const botResponse = data.response || "Desculpe, não consegui processar sua solicitação agora.";
 
-      const taskListMatch = botResponse.match(/TITLE:\s*(.+?)(?:\n|\r\n)(?:VIDEO:\s*(.+?)(?:\n|\r\n))?TASKS:\s*((?:\d+\.\s*.+(?:\n|\r\n?)*)+)/i);
+      // Lógica para extrair o título e as tarefas da resposta formatada
+      const taskListMatch = botResponse.match(/TITULO:\s*(.+?)(?:\n|\r\n)TAREFAS:\s*((?:\d+\.\s*.+(?:\n|\r\n?)*)+)/i);
       
       let displayMessage = "";
-      let taskListCreated = false;
       
       if (taskListMatch) {
         const title = taskListMatch[1].trim();
-        const videoUrl = taskListMatch[2]?.trim();
-        const taskText = taskListMatch[3];
+        const taskText = taskListMatch[2];
         const tasks = taskText.split(/\d+\.\s*/).filter(task => task.trim()).map(task => task.trim().replace(/\n|\r\n/g, ''));
         
         if (tasks.length > 0) {
+          // Atraso para dar tempo de ver a mensagem antes da transição de tela
           setTimeout(() => {
-            onCreateTaskListFromAI?.(title, tasks, videoUrl);
+            onCreateTaskListFromAI?.(title, tasks);
           }, 500);
           
-          const videoMessage = videoUrl ? " e anexei um vídeo relevante" : "";
-          displayMessage = `${t('createdTaskList')}: "${title}" ${t('withTasks')} ${tasks.length} ${t('tasks')}${videoMessage} ${t('forYou')}`;
-          taskListCreated = true;
+          displayMessage = `${t('createdTaskList')}: "${title}" ${t('withTasks')} ${tasks.length} ${t('tasks')} ${t('forYou')}`;
+        } else {
+          displayMessage = botResponse;
         }
       } else {
-        const numberedListMatch = botResponse.match(/(?:\n|^)(\d+\.\s*.+(?:\n\d+\.\s*.+)*)/);
-        if (numberedListMatch) {
-          const taskText = numberedListMatch[1];
-          const tasks = taskText.split(/\d+\.\s*/).filter(task => task.trim()).map(task => task.trim().replace(/\n|\r\n/g, ''));
-          
-          if (tasks.length >= 2) {
-            const title = content.length > 50 ? "Tarefas Geradas" : content;
-            setTimeout(() => {
-              onCreateTaskListFromAI?.(title, tasks);
-            }, 500);
-            
-            displayMessage = `${t('createdTaskList')}: "${title}" ${t('withTasks')} ${tasks.length} ${t('tasks')} ${t('forYou')}`;
-            taskListCreated = true;
-          }
-        }
-      }
-      
-      if (!taskListCreated) {
         displayMessage = botResponse;
       }
 
@@ -134,22 +106,10 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
 
     } catch (error) {
       console.error('Chat API error:', error);
-      let errorContent = "Desculpe, ocorreu um erro na conexão com a API. Tente novamente em alguns instantes.";
-      
-      if (error instanceof Error) {
-        if (error.message.includes("inválida ou foi revogada")) {
-          errorContent = `❌ Problema com a chave da API: ${error.message}`;
-        } else if (error.message.includes("não foi encontrado")) {
-          errorContent = `❌ Problema de configuração: ${error.message}`;
-        } else {
-          errorContent = `❌ Erro de conexão: ${error.message}`;
-        }
-      }
-      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: errorContent,
+        content: `❌ Erro: ${error instanceof Error ? error.message : 'Ocorreu um problema.'}`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
