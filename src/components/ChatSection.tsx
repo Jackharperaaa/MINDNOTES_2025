@@ -63,16 +63,20 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
       });
 
       if (error) {
-        // Modificação aqui para extrair a mensagem de erro detalhada
         let errorMessageContent = `Erro ao invocar a Edge Function: ${error.message}`;
-        if (error instanceof FunctionsHttpError && error.context?.body) {
+        if (error instanceof FunctionsHttpError && error.context) {
           try {
-            const errorBody = JSON.parse(error.context.body);
+            // Usando await error.context.json() para uma extração mais robusta
+            const errorBody = await error.context.json();
             if (errorBody.error) {
               errorMessageContent = `❌ Erro: ${errorBody.error}`;
             }
           } catch (parseError) {
             console.error("Failed to parse Edge Function error body:", parseError);
+            // Fallback para o corpo como texto se json() falhar
+            if (error.context.body) {
+              errorMessageContent = `❌ Erro: ${error.context.body}`;
+            }
           }
         }
         throw new Error(errorMessageContent);
