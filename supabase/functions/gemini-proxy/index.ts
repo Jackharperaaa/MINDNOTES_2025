@@ -23,10 +23,11 @@ serve(async (req) => {
   }
 
   try {
-    const geminiApiKey = Deno.env.get('API_MIND');
+    // FORÇANDO O USO DE UM NOVO SEGREDO PARA GARANTIR A ATUALIZAÇÃO
+    const geminiApiKey = Deno.env.get('API_MIND_V2');
     if (!geminiApiKey || geminiApiKey.trim() === '') {
-      console.error("Edge Function Error (500): Secret 'API_MIND' não encontrado ou vazio. Por favor, configure-o no painel da Supabase.");
-      return new Response(JSON.stringify({ error: "O secret 'API_MIND' com a chave da API do Gemini não foi configurado corretamente no painel da Supabase." }), {
+      console.error("Edge Function Error (500): Secret 'API_MIND_V2' não encontrado ou vazio.");
+      return new Response(JSON.stringify({ error: "O secret 'API_MIND_V2' com a chave da API do Gemini não foi configurado corretamente." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
@@ -34,14 +35,13 @@ serve(async (req) => {
 
     const { user_message } = await req.json();
     if (!user_message) {
-      console.error("Edge Function Error (400): Parâmetro 'user_message' ausente na requisição.");
+      console.error("Edge Function Error (400): Parâmetro 'user_message' ausente.");
       return new Response(JSON.stringify({ error: "O parâmetro 'user_message' é obrigatório." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
 
-    // Alterado para gemini-1.5-flash-latest
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`;
 
     const requestBody = {
@@ -63,7 +63,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorBody = await response.json();
-      console.error(`Edge Function Error (Gemini API - ${response.status}): Gemini API retornou status ${response.status}. Detalhes:`, errorBody);
+      console.error(`Erro da API do Gemini (${response.status}):`, errorBody);
       return new Response(JSON.stringify({ error: `Erro na API do Gemini: ${errorBody.error?.message || 'Erro desconhecido'}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: response.status,
@@ -71,7 +71,6 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    
     const botResponseContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível gerar uma resposta.";
 
     return new Response(JSON.stringify({ response: botResponseContent }), {
@@ -80,7 +79,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Edge Function Catch Error (500): Erro inesperado na Edge Function:", error);
+    console.error("Erro inesperado na Edge Function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
