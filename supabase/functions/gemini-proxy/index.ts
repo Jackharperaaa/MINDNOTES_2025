@@ -5,7 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// O prompt do sistema define como a IA deve se comportar e formatar a resposta.
 const SYSTEM_PROMPT = `Você é um assistente de produtividade focado em criar listas de tarefas. Responda em português do Brasil. Sua resposta deve ser APENAS no seguinte formato, sem exceções:
 
 TITULO: [Um título curto e claro para a lista de tarefas]
@@ -24,30 +23,26 @@ serve(async (req) => {
   }
 
   try {
-    // Pega a chave da API do Gemini dos secrets da Supabase.
-    // IMPORTANTE: O nome do secret DEVE ser 'API_MINDNOTE'.
     const geminiApiKey = Deno.env.get('API_MINDNOTE');
     if (!geminiApiKey || geminiApiKey.trim() === '') {
-      console.error("Edge Function Error: Secret 'API_MINDNOTE' não encontrado ou vazio.");
+      console.error("Edge Function Error (500): Secret 'API_MINDNOTE' não encontrado ou vazio. Por favor, configure-o no painel da Supabase.");
       return new Response(JSON.stringify({ error: "O secret 'API_MINDNOTE' com a chave da API do Gemini não foi configurado corretamente no painel da Supabase." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    // Pega a mensagem do usuário do corpo da requisição.
     const { user_message } = await req.json();
     if (!user_message) {
+      console.error("Edge Function Error (400): Parâmetro 'user_message' ausente na requisição.");
       return new Response(JSON.stringify({ error: "O parâmetro 'user_message' é obrigatório." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
 
-    // Alterado o modelo de 'gemini-pro' para 'gemini-1.5-flash'
     const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
 
-    // Monta o corpo da requisição para a API do Gemini.
     const requestBody = {
       contents: [
         {
@@ -59,7 +54,6 @@ serve(async (req) => {
       ]
     };
 
-    // Chama a API do Gemini.
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -68,7 +62,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorBody = await response.json();
-      console.error(`Edge Function Error: Gemini API returned status ${response.status}.`, errorBody);
+      console.error(`Edge Function Error (Gemini API - ${response.status}): Gemini API retornou status ${response.status}. Detalhes:`, errorBody);
       return new Response(JSON.stringify({ error: `Erro na API do Gemini: ${errorBody.error?.message || 'Erro desconhecido'}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: response.status,
@@ -77,7 +71,6 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    // Extrai o conteúdo da resposta do Gemini.
     const botResponseContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível gerar uma resposta.";
 
     return new Response(JSON.stringify({ response: botResponseContent }), {
@@ -86,7 +79,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Edge Function Catch Error:", error);
+    console.error("Edge Function Catch Error (500): Erro inesperado na Edge Function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
