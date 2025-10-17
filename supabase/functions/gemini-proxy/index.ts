@@ -23,10 +23,10 @@ serve(async (req) => {
   }
 
   try {
-    const geminiApiKey = Deno.env.get('API_MINDNOTE');
+    const geminiApiKey = Deno.env.get('API_MIND');
     if (!geminiApiKey || geminiApiKey.trim() === '') {
-      console.error("Edge Function Error (500): Secret 'API_MINDNOTE' não encontrado ou vazio. Por favor, configure-o no painel da Supabase.");
-      return new Response(JSON.stringify({ error: "O secret 'API_MINDNOTE' com a chave da API do Gemini não foi configurado corretamente no painel da Supabase." }), {
+      console.error("Edge Function Error (500): Secret 'API_MIND' não encontrado ou vazio. Por favor, configure-o no painel da Supabase.");
+      return new Response(JSON.stringify({ error: "O secret 'API_MIND' com a chave da API do Gemini não foi configurado corretamente no painel da Supabase." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
