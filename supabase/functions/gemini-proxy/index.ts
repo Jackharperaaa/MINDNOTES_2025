@@ -41,8 +41,8 @@ serve(async (req) => {
       });
     }
 
-    // Alterado de gemini-1.5-flash para gemini-pro
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    // Alterado para gemini-1.5-flash
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
 
     const requestBody = {
       contents: [
