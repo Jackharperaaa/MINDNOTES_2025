@@ -12,15 +12,17 @@ serve(async (req) => {
 
   try {
     const openRouterApiKey = Deno.env.get('API_MINDNOTE');
-    console.log("Edge Function: Attempting to get API_MINDNOTE secret."); // Log para depuração
-    if (!openRouterApiKey) {
-      console.error("Edge Function Error: API_MINDNOTE secret not found."); // Log para depuração
-      return new Response(JSON.stringify({ error: "O secret 'API_MINDNOTE' não foi encontrado. Verifique se ele foi criado corretamente no painel da Supabase." }), {
+    console.log("Edge Function: Attempting to get API_MINDNOTE secret.");
+
+    // Validação aprimorada para garantir que a chave não seja nula ou vazia
+    if (!openRouterApiKey || openRouterApiKey.trim() === '') {
+      console.error("Edge Function Error: API_MINDNOTE secret not found or is empty.");
+      return new Response(JSON.stringify({ error: "O secret 'API_MINDNOTE' não foi encontrado ou está vazio. Verifique se ele foi criado corretamente no painel da Supabase." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
-    console.log("Edge Function: API_MINDNOTE secret found."); // Log para depuração
+    console.log("Edge Function: API_MINDNOTE secret found.");
 
     const { messages } = await req.json();
 
@@ -40,16 +42,16 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Edge Function Error: OpenRouter API returned status ${response.status}. Response: ${errorText}`); // Log para depuração
+      console.error(`Edge Function Error: OpenRouter API returned status ${response.status}. Response: ${errorText}`);
       if (response.status === 401) {
         return new Response(JSON.stringify({ error: "A chave de API fornecida no secret 'API_MINDNOTE' é inválida ou foi revogada. Por favor, verifique o valor no painel da Supabase." }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401, // Retorna 401 para o cliente para tratamento específico
+          status: 401,
         });
       }
       return new Response(JSON.stringify({ error: `Erro na API do OpenRouter: ${response.status} - ${errorText}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: response.status, // Passa o código de status real
+        status: response.status,
       });
     }
 
@@ -60,7 +62,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Edge Function Catch Error:", error); // Log para depuração
+    console.error("Edge Function Catch Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
