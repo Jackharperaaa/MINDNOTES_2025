@@ -70,14 +70,16 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
       });
 
       if (error) {
-        throw error;
+        // Erro do cliente Supabase (rede, etc.)
+        throw new Error(`Erro de rede ou cliente Supabase: ${error.message}`);
       }
       
+      // Verifica por erros retornados pela própria Edge Function (ex: 401, 500)
       if (data.error) {
         throw new Error(data.error);
       }
 
-      const botResponse = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't process your request right now.";
+      const botResponse = data.choices?.[0]?.message?.content || "Desculpe, não consegui processar sua solicitação agora.";
 
       const taskListMatch = botResponse.match(/TITLE:\s*(.+?)(?:\n|\r\n)(?:VIDEO:\s*(.+?)(?:\n|\r\n))?TASKS:\s*((?:\d+\.\s*.+(?:\n|\r\n?)*)+)/i);
       
