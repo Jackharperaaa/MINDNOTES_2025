@@ -4,6 +4,7 @@ import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -53,17 +54,9 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer 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",
-          "HTTP-Referer": "https://mindnotes.app",
-          "X-Title": "Mind Notes",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          "model": "deepseek/deepseek-chat-v3.1:free",
-          "messages": [
+      const { data, error } = await supabase.functions.invoke('open-router-proxy', {
+        body: {
+          messages: [
             {
               "role": "system",
               "content": "Você é um assistente de produtividade. Responda em português brasileiro. Quando os usuários pedirem listas de tarefas, responda APENAS com:\n\nTITULO: [Título curto e claro]\nVIDEO: [URL do YouTube se relevante, caso contrário omita esta linha]\nTAREFAS:\n1. [Tarefa específica e acionável]\n2. [Tarefa específica e acionável]\n3. [Tarefa específica e acionável]\n4. [Tarefa específica e acionável]\n5. [Tarefa específica e acionável]\n\nSem texto extra, explicações ou símbolos. Mantenha as tarefas concretas e acionáveis. Máximo 8 tarefas. Inclua a linha VIDEO apenas se o usuário mencionar especificamente vídeos do YouTube ou se você estiver recomendando conteúdo educacional relevante."
@@ -73,28 +66,19 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
               "content": content
             }
           ]
-        })
+        },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`API Error ${response.status}:`, errorText);
-        
-        if (response.status === 401) {
-          throw new Error("Chave da API inválida ou expirada. Verifique suas credenciais.");
-        } else if (response.status === 429) {
-          throw new Error("Muitas requisições. Tente novamente em alguns segundos.");
-        } else if (response.status >= 500) {
-          throw new Error("Erro no servidor da API. Tente novamente mais tarde.");
-        } else {
-          throw new Error(`Erro na API: ${response.status} - ${errorText}`);
-        }
+      if (error) {
+        throw error;
+      }
+      
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      const data = await response.json();
       const botResponse = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't process your request right now.";
 
-      // Check if the response contains a task list format and extract it
       const taskListMatch = botResponse.match(/TITLE:\s*(.+?)(?:\n|\r\n)(?:VIDEO:\s*(.+?)(?:\n|\r\n))?TASKS:\s*((?:\d+\.\s*.+(?:\n|\r\n?)*)+)/i);
       
       let displayMessage = "";
@@ -107,7 +91,6 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
         const tasks = taskText.split(/\d+\.\s*/).filter(task => task.trim()).map(task => task.trim().replace(/\n|\r\n/g, ''));
         
         if (tasks.length > 0) {
-          // Auto-create task list from AI response
           setTimeout(() => {
             onCreateTaskListFromAI?.(title, tasks, videoUrl);
           }, 500);
@@ -117,14 +100,12 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
           taskListCreated = true;
         }
       } else {
-        // Fallback detection for any numbered list in the response
         const numberedListMatch = botResponse.match(/(?:\n|^)(\d+\.\s*.+(?:\n\d+\.\s*.+)*)/);
         if (numberedListMatch) {
           const taskText = numberedListMatch[1];
           const tasks = taskText.split(/\d+\.\s*/).filter(task => task.trim()).map(task => task.trim().replace(/\n|\r\n/g, ''));
           
           if (tasks.length >= 2) {
-            // Extract title from user message or use default
             const title = content.length > 50 ? "Tarefas Geradas" : content;
             setTimeout(() => {
               onCreateTaskListFromAI?.(title, tasks);
@@ -136,7 +117,6 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
         }
       }
       
-      // If no task list was created, show original response
       if (!taskListCreated) {
         displayMessage = botResponse;
       }
@@ -155,12 +135,10 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
       let errorContent = "Desculpe, ocorreu um erro na conexão com a API. Tente novamente em alguns instantes.";
       
       if (error instanceof Error) {
-        if (error.message.includes("Chave da API")) {
-          errorContent = "❌ Problema com a chave da API. Entre em contato com o administrador.";
-        } else if (error.message.includes("Muitas requisições")) {
-          errorContent = "⏳ Muitas requisições seguidas. Aguarde alguns segundos e tente novamente.";
-        } else if (error.message.includes("servidor da API")) {
-          errorContent = "🔧 Serviço temporariamente indisponível. Tente novamente em alguns minutos.";
+        if (error.message.includes("inválida ou foi revogada")) {
+          errorContent = `❌ Problema com a chave da API: ${error.message}`;
+        } else if (error.message.includes("não foi encontrado")) {
+          errorContent = `❌ Problema de configuração: ${error.message}`;
         } else {
           errorContent = `❌ Erro de conexão: ${error.message}`;
         }

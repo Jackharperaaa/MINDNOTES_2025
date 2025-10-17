@@ -28,8 +28,8 @@ serve(async (req) => {
       headers: {
         "Authorization": `Bearer ${openRouterApiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://mindnotes.app", // Opcional, mas bom ter
-        "X-Title": "Mind Notes", // Opcional, mas bom ter
+        "HTTP-Referer": "https://mindnotes.app",
+        "X-Title": "Mind Notes",
       },
       body: JSON.stringify({
         "model": "deepseek/deepseek-chat-v3.1:free",
@@ -40,6 +40,10 @@ serve(async (req) => {
     // Verifica se a chamada para a API foi bem-sucedida
     if (!response.ok) {
       const errorText = await response.text();
+      // Adiciona tratamento específico para erro 401 (Não Autorizado)
+      if (response.status === 401) {
+        throw new Error("A chave de API fornecida no secret 'API_MINDNOTE' é inválida ou foi revogada. Por favor, verifique o valor no painel da Supabase.");
+      }
       throw new Error(`Erro na API do OpenRouter: ${response.status} ${errorText}`);
     }
 
