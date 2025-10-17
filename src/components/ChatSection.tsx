@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError } from '@supabase/supabase-js'; // Importar FunctionsHttpError
 
 interface Message {
   id: string;
@@ -62,7 +63,19 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
       });
 
       if (error) {
-        throw new Error(`Erro ao invocar a Edge Function: ${error.message}`);
+        // Modificação aqui para extrair a mensagem de erro detalhada
+        let errorMessageContent = `Erro ao invocar a Edge Function: ${error.message}`;
+        if (error instanceof FunctionsHttpError && error.context?.body) {
+          try {
+            const errorBody = JSON.parse(error.context.body);
+            if (errorBody.error) {
+              errorMessageContent = `❌ Erro: ${errorBody.error}`;
+            }
+          } catch (parseError) {
+            console.error("Failed to parse Edge Function error body:", parseError);
+          }
+        }
+        throw new Error(errorMessageContent);
       }
       
       if (data.error) {
@@ -109,7 +122,7 @@ export const ChatSection = ({ onCreateTaskListFromAI }: ChatSectionProps) => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: `❌ Erro: ${error instanceof Error ? error.message : 'Ocorreu um problema.'}`,
+        content: `${error instanceof Error ? error.message : 'Ocorreu um problema.'}`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
