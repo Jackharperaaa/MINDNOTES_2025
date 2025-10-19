@@ -17,17 +17,15 @@ TAREFAS:
 Não inclua introduções, despedidas, explicações ou qualquer outro texto fora deste formato. Crie no máximo 8 tarefas.`;
 
 serve(async (req) => {
-  // Trata a requisição pre-flight de CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // FORÇANDO O USO DE UM NOVO SEGREDO PARA GARANTIR A ATUALIZAÇÃO
-    const geminiApiKey = Deno.env.get('API_MIND_V2');
+    const geminiApiKey = Deno.env.get('MINDNOTE_2025');
     if (!geminiApiKey || geminiApiKey.trim() === '') {
-      console.error("Edge Function Error (500): Secret 'API_MIND_V2' não encontrado ou vazio.");
-      return new Response(JSON.stringify({ error: "O secret 'API_MIND_V2' com a chave da API do Gemini não foi configurado corretamente." }), {
+      console.error("Edge Function Error (500): Secret 'MINDNOTE_2025' não encontrado ou vazio.");
+      return new Response(JSON.stringify({ error: "O secret 'MINDNOTE_2025' com a chave da API do Gemini não foi configurado corretamente." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
