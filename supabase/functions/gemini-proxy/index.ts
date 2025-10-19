@@ -40,17 +40,21 @@ serve(async (req) => {
       });
     }
 
-    const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
 
     const requestBody = {
       contents: [
         {
+          role: "user",
           parts: [
-            { text: SYSTEM_PROMPT },
-            { text: `Usuário: ${user_message}` }
+            { text: `${SYSTEM_PROMPT}\n\nUsuário: ${user_message}` }
           ]
         }
-      ]
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1024
+      }
     };
 
     const response = await fetch(API_URL, {
