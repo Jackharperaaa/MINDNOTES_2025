@@ -30,10 +30,27 @@ export const SessionContextProvider: React.FC<SessionContextProviderProps> = ({ 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    const checkSession = async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       setSession(currentSession);
       setUser(currentSession?.user || null);
       setIsLoading(false);
+
+      // Redirect logic based on initial session check
+      if (!currentSession && window.location.pathname !== '/login') {
+        navigate('/login');
+      } else if (currentSession && window.location.pathname === '/login') {
+        navigate('/');
+      }
+    };
+
+    checkSession(); // Perform initial session check when component mounts
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      setSession(currentSession);
+      setUser(currentSession?.user || null);
+      // No need to set isLoading here, as it's already handled by checkSession
+      // and subsequent state changes don't necessarily mean a "loading" state for the whole app.
 
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         if (currentSession && window.location.pathname === '/login') {
@@ -46,17 +63,17 @@ export const SessionContextProvider: React.FC<SessionContextProviderProps> = ({ 
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user || null);
-      setIsLoading(false);
-      if (!currentSession && window.location.pathname !== '/login') {
-        navigate('/login');
-      }
-    });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Render a loading state while the session is being loaded
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <SessionContext.Provider value={{ session, user, isLoading }}>
