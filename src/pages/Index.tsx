@@ -2,16 +2,25 @@ import { MindNotesApp } from '@/components/MindNotesApp';
 import { useSession } from '@/contexts/SessionContext'; // Import useSession
 
 const Index = () => {
-  const { user, isLoading } = useSession(); // Get session state
+  const { user, isReady } = useSession(); // Get session state and isReady flag
 
-  // If still loading, SessionContextProvider will show its own loading state.
-  // If not loading and user is authenticated, render the app.
+  // While the session context is not ready, show a loading state.
+  // SessionContextProvider itself will show a global loading, but this is a safeguard.
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        Preparing app...
+      </div>
+    );
+  }
+
+  // If isReady is true and a user is authenticated, render the main app.
   if (user) {
     return <MindNotesApp />;
   }
 
-  // If not loading and no user, SessionContextProvider should have already redirected to /login.
-  // So, we return null here as this route won't be active for unauthenticated users.
+  // If isReady is true and no user, the SessionContextProvider should have already
+  // redirected to /login. So, this component should not render anything here.
   return null;
 };
 
